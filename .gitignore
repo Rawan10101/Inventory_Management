@@ -1,5 +1,5 @@
-# Ignore all CSV files in Inventory Management
-data/Inventory Management/*.csv
+# Ignore all CSV files inside the nested Inventory_Management folder
+data/Inventory_Management/*.csv
 
-# keep .gitkeep 
-!data/Inventory Management/.gitkeep
+# Keep the .gitkeep file
+!data/Inventory_Management/.gitkeep
