@@ -1,0 +1,38 @@
+# Sample Dependencies for Hackathon Projects
+# Students should add/remove dependencies based on their solution
+
+# Data Processing
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Machine Learning & Statistics
+scikit-learn>=1.3.0
+scipy>=1.11.0
+
+# Data Visualization
+matplotlib>=3.7.0
+seaborn>=0.12.0
+plotly>=5.14.0
+
+# Web Framework (choose one or both)
+flask>=2.3.0
+fastapi>=0.100.0
+uvicorn>=0.23.0  # For FastAPI
+
+# Frontend (optional)
+streamlit>=1.25.0
+
+# Database (optional)
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.0  # PostgreSQL
+
+# Testing
+pytest>=7.4.0
+pytest-cov>=4.1.0
+
+# Environment Management
+python-dotenv>=1.0.0
+
+# Utilities
+requests>=2.31.0
+python-dateutil>=2.8.0
