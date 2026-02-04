@@ -6,7 +6,6 @@ Author: Sample Team
 """
 
 import pandas as pd
-import numpy as np
 from typing import Optional, List
 
 
@@ -28,7 +27,6 @@ class DataLoader:
         """
         self.data_path = data_path
         self.data = None
-        self.sales_data = None
 
     def load_csv(self, filename: str, parse_dates: Optional[List[str]] = None) -> pd.DataFrame:
         """
@@ -164,16 +162,13 @@ class DataLoader:
             suffixes=("", "_place")
         )
 
-        # Store for later use in inventory snapshot
-        self.sales_data = daily_sales
-
         print("Prepared daily sales dataset (ML-ready)")
         return daily_sales
 
     def prepare_inventory_snapshot(self) -> pd.DataFrame:
         """
         Prepares current inventory snapshot for items managed in inventory.
-        Creates realistic mock inventory based on sales patterns if actual data unavailable.
+        Falls back to creating snapshot from items table if inventory reports unavailable.
         """
         inventory_reports = self.load_inventory_reports()
         items = self.load_items()
@@ -181,7 +176,7 @@ class DataLoader:
         # Keep only inventory-managed items
         inventory_items = items[items["manage_inventory"] == 1].copy()
 
-        if not inventory_reports.empty and 'item_id' in inventory_reports.columns and len(inventory_reports) > 0:
+        if not inventory_reports.empty and 'item_id' in inventory_reports.columns:
             # Use actual inventory reports if available
             inventory = inventory_reports.merge(
                 inventory_items[["id", "title"]],
@@ -190,65 +185,42 @@ class DataLoader:
                 how="inner"
             )
             inventory = inventory.rename(columns={"quantity_on_hand": "current_stock"})
-            print("✅ Prepared inventory snapshot from fct_inventory_reports (ML-ready)")
+            print("Prepared inventory snapshot from fct_inventory_reports (ML-ready)")
         else:
-            # Fallback: create realistic mock inventory based on sales patterns
-            print("⚠️  fct_inventory_reports is empty - creating mock inventory from sales data")
+            # Fallback: create snapshot from items table
+            print("Creating inventory snapshot from dim_items (fallback)")
+            print(f"Available columns in dim_items: {inventory_items.columns.tolist()}")
             
             inventory = inventory_items.copy()
+            
+            # Rename id to item_id
             inventory = inventory.rename(columns={"id": "item_id"})
             
-            # Calculate realistic stock levels based on sales data
-            if self.sales_data is not None and len(self.sales_data) > 0:
-                # Calculate average daily sales per item
-                sales_summary = self.sales_data.groupby('item_id').agg({
-                    'quantity_sold': ['mean', 'std', 'max']
-                }).reset_index()
-                sales_summary.columns = ['item_id', 'avg_daily_sales', 'std_daily_sales', 'max_daily_sales']
-                
-                # Merge with inventory items
-                inventory = inventory.merge(sales_summary, on='item_id', how='left')
-                
-                # Create realistic stock levels:
-                # Stock = 7-14 days of average sales + safety buffer
-                # This simulates a merchant keeping 1-2 weeks of inventory
-                np.random.seed(42)  # For reproducibility
-                inventory['days_of_stock'] = np.random.uniform(7, 14, len(inventory))
-                inventory['current_stock'] = (
-                    inventory['avg_daily_sales'].fillna(0) * inventory['days_of_stock']
-                ).round(0).astype(int)
-                
-                # Add some randomness to make it realistic (some items overstocked, some understocked)
-                random_factor = np.random.uniform(0.7, 1.3, len(inventory))
-                inventory['current_stock'] = (inventory['current_stock'] * random_factor).round(0).astype(int)
-                
-                # Ensure minimum stock of 0
-                inventory['current_stock'] = inventory['current_stock'].clip(lower=0)
-                
-                # Some items should be out of stock (realistic scenario)
-                out_of_stock_mask = np.random.random(len(inventory)) < 0.15  # 15% out of stock
-                inventory.loc[out_of_stock_mask, 'current_stock'] = 0
-                
-                print(f"   Generated stock levels based on sales patterns:")
-                print(f"   - Average stock: {inventory['current_stock'].mean():.0f} units")
-                print(f"   - Items in stock: {(inventory['current_stock'] > 0).sum()}/{len(inventory)}")
-                print(f"   - Out of stock: {(inventory['current_stock'] == 0).sum()} items")
+            # Check what quantity-related columns exist and rename appropriately
+            if 'quantity' in inventory.columns:
+                inventory = inventory.rename(columns={'quantity': 'current_stock'})
+            elif 'stock_quantity' in inventory.columns:
+                inventory = inventory.rename(columns={'stock_quantity': 'current_stock'})
+            elif 'qty' in inventory.columns:
+                inventory = inventory.rename(columns={'qty': 'current_stock'})
             else:
-                # Last resort: use simple defaults
-                print("   Warning: No sales data available, using default stock levels")
-                inventory['current_stock'] = 50  # Default reasonable stock
+                # No quantity column found, create a default one
+                print("Warning: No quantity column found in dim_items, using default value of 0")
+                inventory['current_stock'] = 0
             
-            # Handle unit_cost from price
-            if 'price' in inventory.columns:
-                # Use price as unit_cost estimate (assume 40% profit margin, so cost = 60% of price)
-                inventory['unit_cost'] = inventory['price'] * 0.6
-            else:
-                inventory['unit_cost'] = 0
+            # Handle unit_cost
+            if 'unit_cost' not in inventory.columns:
+                if 'cost' in inventory.columns:
+                    inventory = inventory.rename(columns={'cost': 'unit_cost'})
+                elif 'price' in inventory.columns:
+                    inventory = inventory.rename(columns={'price': 'unit_cost'})
+                else:
+                    inventory['unit_cost'] = 0
             
             # Calculate total_value
             inventory['total_value'] = inventory['current_stock'] * inventory['unit_cost']
 
-        print(f"📦 Inventory snapshot ready: {len(inventory)} items")
+        print(f"Inventory snapshot ready: {len(inventory)} items")
         return inventory
 
     def prepare_item_consumption(self) -> pd.DataFrame:

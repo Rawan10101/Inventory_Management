@@ -40,6 +40,11 @@ class InventoryService:
         """
         self.inventory_data = inventory_data
         self.sales_data = sales_data
+        
+        # Print available columns for debugging
+        print(f"\nSales data columns: {self.sales_data.columns.tolist()}")
+        if not self.inventory_data.empty:
+            print(f"Inventory data columns: {self.inventory_data.columns.tolist()}\n")
     
     def predict_demand(self, item_id: str, period: str = 'daily') -> float:
         """
@@ -66,7 +71,9 @@ class InventoryService:
         
         # Simple moving average (last 7 days for daily, etc.)
         window = 7 if period == 'daily' else 4 if period == 'weekly' else 3
-        avg_demand = item_sales['quantity'].tail(window).mean()
+        
+        # Use 'quantity_sold' column (from prepare_daily_sales)
+        avg_demand = item_sales['quantity_sold'].tail(window).mean()
         
         return round(avg_demand, 2)
     
@@ -103,11 +110,14 @@ class InventoryService:
             pd.DataFrame: DataFrame containing items near expiration with recommendations.
         """
         # This is a placeholder - students should implement actual expiration logic
-        expiring = self.inventory_data[
-            self.inventory_data['days_until_expiration'] <= days_threshold
-        ]
-        
-        return expiring.sort_values('days_until_expiration')
+        if 'days_until_expiration' in self.inventory_data.columns:
+            expiring = self.inventory_data[
+                self.inventory_data['days_until_expiration'] <= days_threshold
+            ]
+            return expiring.sort_values('days_until_expiration')
+        else:
+            print("Warning: 'days_until_expiration' column not found in inventory data")
+            return pd.DataFrame()
     
     def generate_recommendations(self, item_id: str) -> Dict[str, any]:
         """
@@ -119,13 +129,25 @@ class InventoryService:
         Returns:
             Dict[str, any]: Dictionary containing recommendations and metrics.
         """
-        recommendations = {
-            'item_id': item_id,
-            'predicted_daily_demand': self.predict_demand(item_id, 'daily'),
-            'predicted_weekly_demand': self.predict_demand(item_id, 'weekly'),
-            'reorder_point': self.calculate_reorder_point(item_id),
-            'status': 'optimal',  # Students should implement status logic
-            'action': 'monitor'   # Students should implement action recommendations
-        }
+        try:
+            predicted_daily = self.predict_demand(item_id, 'daily')
+            predicted_weekly = self.predict_demand(item_id, 'weekly') 
+            reorder = self.calculate_reorder_point(item_id)
+            
+            recommendations = {
+                'item_id': item_id,
+                'predicted_daily_demand': predicted_daily,
+                'predicted_weekly_demand': predicted_weekly,
+                'reorder_point': reorder,
+                'status': 'optimal',  # Students should implement status logic
+                'action': 'monitor'   # Students should implement action recommendations
+            }
+        except ValueError as e:
+            recommendations = {
+                'item_id': item_id,
+                'error': str(e),
+                'status': 'no_data',
+                'action': 'investigate'
+            }
         
         return recommendations
