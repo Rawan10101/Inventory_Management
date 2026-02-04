@@ -3,3 +3,7 @@ data/Inventory_Management/*.csv
 
 # Keep the .gitkeep file
 !data/Inventory_Management/.gitkeep
+
+__pycache__/
+*.pyc
+
