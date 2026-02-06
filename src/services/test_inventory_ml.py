@@ -2,9 +2,11 @@
 Test script for Advanced ML Inventory Service
 """
 
+import sys
+import pandas as pd
+
 from src.models.data_loader import DataLoader
 from src.services.inventory_service_ml import AdvancedInventoryService
-import pandas as pd
 
 # Load data
 print("Loading data...")
@@ -17,7 +19,7 @@ print("\nInitializing ML Service...")
 service = AdvancedInventoryService(inventory_data=inventory_snapshot, sales_data=daily_sales)
 
 # Pick sample items (preferably with enough history)
-sample_items = daily_sales.groupby('item_id').size().sort_values(ascending=False).head(3).index.tolist()
+sample_items = daily_sales.groupby('item_id').size().sort_values(ascending=False).head(3).index.tolist() # Get top 3 items with most sales history
 
 print(f"\n{'='*70}")
 print(f"Testing {len(sample_items)} items with ML models")
