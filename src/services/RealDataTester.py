@@ -1,17 +1,3 @@
-"""
-============================================================================
-REAL DATA TEST SUITE - Using Enhanced Data Loader V2.1
-============================================================================
-Tests the Ultimate Inventory Intelligence System V3.0 with REAL data
-from your CSV files using the EnhancedDataLoader
-
-Requirements:
-- CSV files in data/Inventory_Management/
-- enhanced_data_loader_v2_1.py
-- ultimate_ai_solution_v3.py
-============================================================================
-"""
-
 import sys
 import pandas as pd
 import numpy as np
@@ -19,13 +5,12 @@ from datetime import datetime
 import warnings
 warnings.filterwarnings('ignore')
 
-# Import your modules
 try:
     from enhanced_data_loader_v2_1 import EnhancedDataLoader
     from ultimate_ai_solution_v3 import UltimateInventoryIntelligence
-    print("✅ Modules imported successfully\n")
+    print(" Modules imported successfully\n")
 except ImportError as e:
-    print(f"❌ Import Error: {e}")
+    print(f" Import Error: {e}")
     print("\nMake sure these files are in the same directory:")
     print("  - enhanced_data_loader_v2_1.py")
     print("  - ultimate_ai_solution_v3.py")
@@ -50,13 +35,13 @@ class RealDataTester:
         self.test_results = []
         
         print("="*70)
-        print("🧪 REAL DATA TEST SUITE - Ultimate Inventory Intelligence V3.0")
+        print(" REAL DATA TEST SUITE - Ultimate Inventory Intelligence V3.0")
         print("="*70)
-        print(f"📁 Data Path: {data_path}\n")
+        print(f" Data Path: {data_path}\n")
     
     def log_result(self, test_name: str, status: str, details: str = ""):
         """Log test result"""
-        icon = "✅" if status == "PASS" else "❌" if status == "FAIL" else "⚠️"
+        icon = "" if status == "PASS" else " " if status == "FAIL" else " "
         result = {
             'test': test_name,
             'status': status,
@@ -67,9 +52,8 @@ class RealDataTester:
         if details:
             print(f"   └─ {details}\n")
     
-    # ========================================================================
     # TEST 1: DATA LOADING
-    # ========================================================================
+    
     
     def test_data_loading(self):
         """Test 1: Load all data using EnhancedDataLoader"""
@@ -82,7 +66,7 @@ class RealDataTester:
             self.loader = EnhancedDataLoader(self.data_path)
             
             # Load daily sales (includes order processing)
-            print("📊 Loading daily sales data...")
+            print(" Loading daily sales data...")
             self.sales_data = self.loader.prepare_daily_sales()
             
             if self.sales_data.empty:
@@ -94,7 +78,7 @@ class RealDataTester:
                 return False
             
             # Load inventory snapshot (uses purchase-sales method)
-            print("\n📦 Loading inventory snapshot...")
+            print("\n Loading inventory snapshot...")
             self.inventory_data = self.loader.prepare_inventory_snapshot()
             
             if self.inventory_data.empty:
@@ -106,18 +90,18 @@ class RealDataTester:
                 return False
             
             # Load supporting data
-            print("\n🧪 Loading Bill of Materials...")
+            print("\n Loading Bill of Materials...")
             self.bom_data = self.loader.load_bill_of_materials()
             
-            print("\n📢 Loading Campaigns...")
+            print("\n Loading Campaigns...")
             self.campaign_data = self.loader.load_campaigns()
             
-            print("\n🏷️  Loading Taxonomy...")
+            print("\n Loading Taxonomy...")
             self.taxonomy_data = self.loader.load_taxonomy_terms()
             
             # Summary
             print("\n" + "="*70)
-            print("📋 DATA LOADING SUMMARY")
+            print(" DATA LOADING SUMMARY")
             print("="*70)
             print(f"Sales Records:      {len(self.sales_data):,}")
             print(f"Inventory Items:    {len(self.inventory_data):,}")
@@ -129,9 +113,9 @@ class RealDataTester:
                 date_min = self.sales_data['date'].min()
                 date_max = self.sales_data['date'].max()
                 date_range = (date_max - date_min).days
-                print(f"\nDate Range:         {date_min.date()} to {date_max.date()}")
-                print(f"Total Days:         {date_range}")
-            
+            print(f"\nDate Range:         {date_min} to {date_max}")                
+            print(f"Total Days:         {date_range}")
+    
             print(f"Unique Items:       {self.sales_data['item_id'].nunique():,}")
             print(f"Unique Places:      {self.sales_data['place_id'].nunique():,}")
             print("="*70 + "\n")
@@ -175,9 +159,7 @@ class RealDataTester:
             print(traceback.format_exc())
             return False
     
-    # ========================================================================
     # TEST 2: DATA QUALITY VALIDATION
-    # ========================================================================
     
     def test_data_quality(self):
         """Test 2: Validate data quality"""
@@ -242,7 +224,7 @@ class RealDataTester:
                     f"{len(issues)} issues found"
                 )
                 for issue in issues:
-                    print(f"   ⚠️  {issue}")
+                    print(f"    {issue}")
                 print()
                 return True  # Still continue with warnings
             
@@ -250,9 +232,7 @@ class RealDataTester:
             self.log_result("Data Quality", "FAIL", str(e))
             return False
     
-    # ========================================================================
     # TEST 3: INITIALIZE AI SYSTEM
-    # ========================================================================
     
     def test_ai_initialization(self):
         """Test 3: Initialize the AI intelligence system"""
@@ -265,7 +245,7 @@ class RealDataTester:
             return False
         
         try:
-            print("🧠 Initializing Ultimate Inventory Intelligence System...")
+            print(" Initializing Ultimate Inventory Intelligence System...")
             
             self.intelligence = UltimateInventoryIntelligence(
                 sales_data=self.sales_data,
@@ -288,9 +268,7 @@ class RealDataTester:
             print(traceback.format_exc())
             return False
     
-    # ========================================================================
     # TEST 4: FEATURE ENGINEERING
-    # ========================================================================
     
     def test_feature_engineering(self):
         """Test 4: Test feature creation with real data"""
@@ -307,7 +285,7 @@ class RealDataTester:
             sample_size = min(500, len(self.sales_data))
             test_sample = self.sales_data.head(sample_size).copy()
             
-            print(f"📊 Testing feature creation on {sample_size} records...")
+            print(f" Testing feature creation on {sample_size} records...")
             
             original_cols = len(test_sample.columns)
             featured_df = self.intelligence.create_advanced_features(test_sample)
@@ -342,7 +320,7 @@ class RealDataTester:
                 )]
             }
             
-            print("\n   📋 Feature Categories:")
+            print("\n    Feature Categories:")
             total_categorized = 0
             for category, features in feature_categories.items():
                 count = len(features)
@@ -374,9 +352,7 @@ class RealDataTester:
             print(traceback.format_exc())
             return False
     
-    # ========================================================================
     # TEST 5: MODEL TRAINING
-    # ========================================================================
     
     def test_model_training(self):
         """Test 5: Train models on real data"""
@@ -399,17 +375,17 @@ class RealDataTester:
             test_item_id = top_items.index[0]
             item_sales_count = top_items.iloc[0]
             
-            print(f"🎯 Testing with Item ID: {test_item_id}")
+            print(f" Testing with Item ID: {test_item_id}")
             print(f"   Sales records: {item_sales_count:,}\n")
             
             if item_sales_count < 50:
-                print("⚠️  Warning: Low sales count. Some models may fail.\n")
+                print("  Warning: Low sales count. Some models may fail.\n")
             
             # Track model success
             model_results = {}
             
             # Traditional Models
-            print("📊 TRADITIONAL MODELS (6):")
+            print(" TRADITIONAL MODELS (6):")
             print("-" * 70)
             
             # XGBoost
@@ -417,13 +393,13 @@ class RealDataTester:
                 print("   Testing XGBoost...", end=" ")
                 xgb_model, xgb_metrics = self.intelligence.train_xgboost_model(test_item_id)
                 if xgb_model and xgb_metrics:
-                    print(f"✅ R²={xgb_metrics['r2']:.3f}, RMSE={xgb_metrics['rmse']:.2f}")
+                    print(f" R²={xgb_metrics['r2']:.3f}, RMSE={xgb_metrics['rmse']:.2f}")
                     model_results['XGBoost'] = True
                 else:
-                    print("❌ Failed")
+                    print(" Failed")
                     model_results['XGBoost'] = False
             except Exception as e:
-                print(f"❌ Error: {str(e)[:50]}")
+                print(f" Error: {str(e)[:50]}")
                 model_results['XGBoost'] = False
             
             # LightGBM
@@ -431,13 +407,13 @@ class RealDataTester:
                 print("   Testing LightGBM...", end=" ")
                 lgb_model, lgb_metrics = self.intelligence.train_lightgbm_model(test_item_id)
                 if lgb_model and lgb_metrics:
-                    print(f"✅ R²={lgb_metrics['r2']:.3f}, RMSE={lgb_metrics['rmse']:.2f}")
+                    print(f" R²={lgb_metrics['r2']:.3f}, RMSE={lgb_metrics['rmse']:.2f}")
                     model_results['LightGBM'] = True
                 else:
-                    print("❌ Failed")
+                    print(" Failed")
                     model_results['LightGBM'] = False
             except Exception as e:
-                print(f"❌ Error: {str(e)[:50]}")
+                print(f" Error: {str(e)[:50]}")
                 model_results['LightGBM'] = False
             
             # GBM
@@ -445,13 +421,13 @@ class RealDataTester:
                 print("   Testing GBM...", end=" ")
                 gbm_model, gbm_metrics = self.intelligence.train_gbm_model(test_item_id)
                 if gbm_model and gbm_metrics:
-                    print(f"✅ R²={gbm_metrics['r2']:.3f}, RMSE={gbm_metrics['rmse']:.2f}")
+                    print(f" R²={gbm_metrics['r2']:.3f}, RMSE={gbm_metrics['rmse']:.2f}")
                     model_results['GBM'] = True
                 else:
-                    print("❌ Failed")
+                    print(" Failed")
                     model_results['GBM'] = False
             except Exception as e:
-                print(f"❌ Error: {str(e)[:50]}")
+                print(f" Error: {str(e)[:50]}")
                 model_results['GBM'] = False
             
             # SARIMA
@@ -459,13 +435,13 @@ class RealDataTester:
                 print("   Testing SARIMA...", end=" ")
                 sarima_model = self.intelligence.train_sarima_model(test_item_id)
                 if sarima_model:
-                    print("✅ Trained")
+                    print("Trained")
                     model_results['SARIMA'] = True
                 else:
-                    print("❌ Failed")
+                    print(" Failed")
                     model_results['SARIMA'] = False
             except Exception as e:
-                print(f"❌ Error: {str(e)[:50]}")
+                print(f" Error: {str(e)[:50]}")
                 model_results['SARIMA'] = False
             
             # Prophet
@@ -473,13 +449,13 @@ class RealDataTester:
                 print("   Testing Prophet...", end=" ")
                 prophet_model = self.intelligence.train_prophet_model(test_item_id)
                 if prophet_model:
-                    print("✅ Trained")
+                    print("Trained")
                     model_results['Prophet'] = True
                 else:
-                    print("❌ Failed")
+                    print(" Failed")
                     model_results['Prophet'] = False
             except Exception as e:
-                print(f"❌ Error: {str(e)[:50]}")
+                print(f"Error: {str(e)[:50]}")
                 model_results['Prophet'] = False
             
             # Holt-Winters
@@ -487,17 +463,17 @@ class RealDataTester:
                 print("   Testing Holt-Winters...", end=" ")
                 hw_model = self.intelligence.train_holtwinters_model(test_item_id)
                 if hw_model:
-                    print("✅ Trained")
+                    print(" Trained")
                     model_results['HoltWinters'] = True
                 else:
-                    print("❌ Failed")
+                    print(" Failed")
                     model_results['HoltWinters'] = False
             except Exception as e:
-                print(f"❌ Error: {str(e)[:50]}")
+                print(f" Error: {str(e)[:50]}")
                 model_results['HoltWinters'] = False
             
             # Deep Learning Models
-            print("\n🧠 DEEP LEARNING MODELS (3):")
+            print("\n DEEP LEARNING MODELS (3):")
             print("-" * 70)
             
             # LSTM
@@ -505,13 +481,13 @@ class RealDataTester:
                 print("   Testing LSTM...", end=" ")
                 lstm_model, lstm_metrics = self.intelligence.train_lstm_model(test_item_id)
                 if lstm_model and lstm_metrics:
-                    print(f"✅ R²={lstm_metrics['r2']:.3f}, RMSE={lstm_metrics['rmse']:.2f}")
+                    print(f" R²={lstm_metrics['r2']:.3f}, RMSE={lstm_metrics['rmse']:.2f}")
                     model_results['LSTM'] = True
                 else:
-                    print("❌ Failed")
+                    print(" Failed")
                     model_results['LSTM'] = False
             except Exception as e:
-                print(f"❌ Error: {str(e)[:50]}")
+                print(f" Error: {str(e)[:50]}")
                 model_results['LSTM'] = False
             
             # GRU
@@ -519,13 +495,13 @@ class RealDataTester:
                 print("   Testing GRU...", end=" ")
                 gru_model, gru_metrics = self.intelligence.train_gru_model(test_item_id)
                 if gru_model and gru_metrics:
-                    print(f"✅ R²={gru_metrics['r2']:.3f}, RMSE={gru_metrics['rmse']:.2f}")
+                    print(f" R²={gru_metrics['r2']:.3f}, RMSE={gru_metrics['rmse']:.2f}")
                     model_results['GRU'] = True
                 else:
-                    print("❌ Failed")
+                    print(" Failed")
                     model_results['GRU'] = False
             except Exception as e:
-                print(f"❌ Error: {str(e)[:50]}")
+                print(f" Error: {str(e)[:50]}")
                 model_results['GRU'] = False
             
             # Transformer
@@ -533,13 +509,13 @@ class RealDataTester:
                 print("   Testing Transformer...", end=" ")
                 trans_model, trans_metrics = self.intelligence.train_transformer_model(test_item_id)
                 if trans_model and trans_metrics:
-                    print(f"✅ R²={trans_metrics['r2']:.3f}, RMSE={trans_metrics['rmse']:.2f}")
+                    print(f" R²={trans_metrics['r2']:.3f}, RMSE={trans_metrics['rmse']:.2f}")
                     model_results['Transformer'] = True
                 else:
-                    print("❌ Failed")
+                    print(" Failed")
                     model_results['Transformer'] = False
             except Exception as e:
-                print(f"❌ Error: {str(e)[:50]}")
+                print(f" Error: {str(e)[:50]}")
                 model_results['Transformer'] = False
             
             # Summary
@@ -547,7 +523,7 @@ class RealDataTester:
             total_models = len(model_results)
             
             print("\n" + "="*70)
-            print(f"📊 MODEL TRAINING SUMMARY: {successful_models}/{total_models} models succeeded")
+            print(f"MODEL TRAINING SUMMARY: {successful_models}/{total_models} models succeeded")
             print("="*70 + "\n")
             
             if successful_models >= 6:
@@ -577,9 +553,7 @@ class RealDataTester:
             print(traceback.format_exc())
             return False
     
-    # ========================================================================
     # TEST 6: ENSEMBLE PREDICTION
-    # ========================================================================
     
     def test_ensemble_prediction(self):
         """Test 6: Generate ensemble predictions"""
@@ -596,7 +570,7 @@ class RealDataTester:
             top_items = self.sales_data['item_id'].value_counts().head(3)
             test_item_id = top_items.index[0]
             
-            print(f"🔮 Generating 7-day forecast for Item {test_item_id}...")
+            print(f"Generating 7-day forecast for Item {test_item_id}...")
             print()
             
             # Generate forecast
@@ -619,7 +593,7 @@ class RealDataTester:
             
             # Display results
             print("\n" + "="*70)
-            print("📊 FORECAST RESULTS")
+            print(" FORECAST RESULTS")
             print("="*70)
             print(f"Ensemble Prediction:  {prediction:.2f} units/day")
             print(f"Confidence Level:     {confidence:.1%}")
@@ -668,9 +642,7 @@ class RealDataTester:
             print(traceback.format_exc())
             return False
     
-    # ========================================================================
     # TEST 7: KITCHEN PREP CALCULATOR
-    # ========================================================================
     
     def test_prep_calculator(self):
         """Test 7: Test kitchen prep calculator with real BOM"""
@@ -691,7 +663,7 @@ class RealDataTester:
             return True  # Not a failure, just skip
         
         try:
-            print("👨‍🍳 Calculating ingredient requirements for 7 days...")
+            print("Calculating ingredient requirements for 7 days...")
             
             prep_list = self.intelligence.calculate_prep_quantities(
                 days_ahead=7,
@@ -708,7 +680,7 @@ class RealDataTester:
             
             # Display results
             print("\n" + "="*70)
-            print("📋 SHOPPING LIST (Top 10)")
+            print(" SHOPPING LIST (Top 10)")
             print("="*70)
             print(f"{'Ingredient':<30} {'Needed':>10} {'Stock':>10} {'Order':>10} {'Unit':<8}")
             print("-"*70)
@@ -746,7 +718,7 @@ class RealDataTester:
     def run_all_tests(self):
         """Run complete test suite"""
         print("\n" + "="*70)
-        print("🧪 STARTING COMPREHENSIVE TEST SUITE WITH REAL DATA")
+        print(" STARTING COMPREHENSIVE TEST SUITE WITH REAL DATA")
         print("="*70 + "\n")
         
         tests = [
@@ -765,7 +737,7 @@ class RealDataTester:
                 result = test_func()
                 results.append(result)
             except Exception as e:
-                print(f"\n❌ CRITICAL ERROR in {test_name}: {e}")
+                print(f"\n CRITICAL ERROR in {test_name}: {e}")
                 import traceback
                 print(traceback.format_exc())
                 results.append(False)
@@ -778,7 +750,7 @@ class RealDataTester:
     def print_summary(self):
         """Print comprehensive test summary"""
         print("\n" + "="*70)
-        print("📊 FINAL TEST SUMMARY")
+        print(" FINAL TEST SUMMARY")
         print("="*70 + "\n")
         
         if not self.test_results:
@@ -794,18 +766,18 @@ class RealDataTester:
         skipped = len(df[df['status'] == 'SKIP'])
         
         print(f"Total Tests:    {total}")
-        print(f"✅ Passed:      {passed}")
-        print(f"❌ Failed:      {failed}")
-        print(f"⚠️  Warnings:    {warnings}")
-        print(f"⏭️  Skipped:     {skipped}")
+        print(f" Passed:      {passed}")
+        print(f" Failed:      {failed}")
+        print(f"  Warnings:    {warnings}")
+        print(f" Skipped:     {skipped}")
         print(f"\nSuccess Rate:   {passed/total*100:.1f}%")
         
         print("\n" + "="*70)
-        print("📋 DETAILED RESULTS")
+        print(" DETAILED RESULTS")
         print("="*70 + "\n")
         
         for idx, row in df.iterrows():
-            icon = "✅" if row['status'] == 'PASS' else "❌" if row['status'] == 'FAIL' else "⚠️" if row['status'] == 'WARN' else "⏭️"
+            icon = "" if row['status'] == 'PASS' else " " if row['status'] == 'FAIL' else " " if row['status'] == 'WARN' else "⏭️"
             print(f"{icon} {row['test']}: {row['status']}")
             if row['details']:
                 print(f"   └─ {row['details']}")
@@ -813,53 +785,34 @@ class RealDataTester:
         print("\n" + "="*70)
         
         if failed == 0 and warnings == 0:
-            print("🎉 PERFECT! ALL TESTS PASSED!")
+            print("PERFECT! ALL TESTS PASSED!")
             print("\nYour system is ready for production use.")
         elif failed == 0:
-            print("✅ SUCCESS! All critical tests passed")
+            print(" SUCCESS! All critical tests passed")
             print(f"\n{warnings} warning(s) - review but not blocking")
         elif failed <= 2:
-            print("⚠️  PARTIAL SUCCESS")
+            print("PARTIAL SUCCESS")
             print(f"\n{failed} test(s) failed - review required")
         else:
-            print("❌ MULTIPLE FAILURES")
+            print("MULTIPLE FAILURES")
             print(f"\n{failed} test(s) failed - needs attention")
         
         print("="*70 + "\n")
 
 
-# ============================================================================
-# MAIN EXECUTION
-# ============================================================================
-
 if __name__ == "__main__":
-    print("""
-    ╔════════════════════════════════════════════════════════════════════════╗
-    ║                                                                        ║
-    ║        REAL DATA TEST SUITE - INVENTORY INTELLIGENCE V3.0              ║
-    ║                                                                        ║
-    ║  Tests with ACTUAL CSV data using EnhancedDataLoader V2.1              ║
-    ║  9 Models: XGBoost, LightGBM, GBM, SARIMA, Prophet, Holt-Winters,     ║
-    ║            LSTM, GRU, Transformer                                      ║
-    ║                                                                        ║
-    ╚════════════════════════════════════════════════════════════════════════╝
-    """)
-    
-    # You can change the data path here if needed
     DATA_PATH = "D:/Inventory_Management/data/Inventory_Management"
     
-    # Create and run tester
     tester = RealDataTester(data_path=DATA_PATH)
     results = tester.run_all_tests()
     
-    # Exit code
     passed = sum([r for r in results if r])
     total = len(results)
     success_rate = (passed / total * 100) if total > 0 else 0
     
     exit_code = 0 if success_rate >= 80 else 1
     
-    print(f"\n🏁 Test suite completed")
+    print(f"\nTest suite completed")
     print(f"   Success Rate: {success_rate:.1f}%")
     print(f"   Exit Code: {exit_code}")
     print("="*70 + "\n")

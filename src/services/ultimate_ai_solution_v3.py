@@ -47,8 +47,8 @@ from tensorflow.keras.layers import (
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 
-print(f"TensorFlow Version: {tf.__version__}")
-print(f" GPU Available: {tf.config.list_physical_devices('GPU')}")
+print(f"✅ TensorFlow Version: {tf.__version__}")
+print(f"✅ GPU Available: {tf.config.list_physical_devices('GPU')}")
 
 
 class UltimateInventoryIntelligence:
@@ -443,14 +443,30 @@ class UltimateInventoryIntelligence:
         item_popularity = df.groupby('item_id')['quantity_sold'].sum().rank(pct=True)
         df['item_popularity_rank'] = df['item_id'].map(item_popularity)
         
-        # Price tier
+        # Price tier - with error handling for duplicate values
         if 'item_price' in df.columns:
-            df['price_tier'] = pd.qcut(
-                df['item_price'], 
-                q=5, 
-                labels=[1, 2, 3, 4, 5], 
-                duplicates='drop'
-            )
+            try:
+                df['price_tier'] = pd.qcut(
+                    df['item_price'], 
+                    q=5, 
+                    labels=[1, 2, 3, 4, 5], 
+                    duplicates='drop'
+                )
+            except (ValueError, TypeError):
+                # Fallback: use equal-width bins or default value
+                unique_prices = df['item_price'].nunique()
+                if unique_prices >= 5:
+                    try:
+                        df['price_tier'] = pd.cut(df['item_price'], bins=5, labels=[1,2,3,4,5]).fillna(3)
+                    except:
+                        df['price_tier'] = 3
+                elif unique_prices >= 3:
+                    try:
+                        df['price_tier'] = pd.cut(df['item_price'], bins=3, labels=[1,3,5]).fillna(3)
+                    except:
+                        df['price_tier'] = 3
+                else:
+                    df['price_tier'] = 3  # Default to middle tier
         
         # Velocity classification (fast/medium/slow mover)
         total_sales = df.groupby('item_id')['quantity_sold'].sum()
@@ -490,10 +506,24 @@ class UltimateInventoryIntelligence:
             df['ingredient_count'] = 0
             df['is_composite_item'] = 0
             df['recipe_complexity'] = 0
+            df['has_bom'] = 0
+            return df
+        
+        # Flexible column detection for BOM
+        if 'menu_item_id' in self.bom.columns:
+            menu_item_col = 'menu_item_id'
+        elif 'id' in self.bom.columns:
+            menu_item_col = 'id'
+        else:
+            # No recognized column, skip BOM features
+            df['ingredient_count'] = 0
+            df['is_composite_item'] = 0
+            df['recipe_complexity'] = 0
+            df['has_bom'] = 0
             return df
         
         # Count ingredients per menu item
-        ingredient_counts = self.bom.groupby('menu_item_id').size().to_dict()
+        ingredient_counts = self.bom.groupby(menu_item_col).size().to_dict()
         
         df['ingredient_count'] = df['item_id'].map(ingredient_counts).fillna(0)
         df['is_composite_item'] = (df['ingredient_count'] > 0).astype(int)
@@ -503,7 +533,7 @@ class UltimateInventoryIntelligence:
         df['recipe_complexity'] = df['ingredient_count'] / (max_ingredients + 1)
         
         # Has BOM flag
-        df['has_bom'] = df['item_id'].isin(self.bom['menu_item_id']).astype(int)
+        df['has_bom'] = df['item_id'].isin(self.bom[menu_item_col]).astype(int)
         
         return df
     
@@ -540,21 +570,35 @@ class UltimateInventoryIntelligence:
         if self.campaigns.empty:
             return df
         
-        # Prepare campaign dates
+        # Prepare campaign dates with safe conversion
         if 'start_date_datetime' in self.campaigns.columns:
             campaigns = self.campaigns.copy()
-            campaigns['start_date'] = campaigns['start_date_datetime'].dt.date
-            campaigns['end_date'] = campaigns['end_date_datetime'].dt.date
+            campaigns['start_date'] = pd.to_datetime(campaigns['start_date_datetime'])
+            campaigns['end_date'] = pd.to_datetime(campaigns['end_date_datetime'])
+            # Convert to date objects if they're timestamps
+            if len(campaigns) > 0 and isinstance(campaigns['start_date'].iloc[0], pd.Timestamp):
+                campaigns['start_date'] = campaigns['start_date'].dt.date
+                campaigns['end_date'] = campaigns['end_date'].dt.date
         elif 'start_date' in self.campaigns.columns:
             campaigns = self.campaigns.copy()
-            campaigns['start_date'] = pd.to_datetime(campaigns['start_date']).dt.date
-            campaigns['end_date'] = pd.to_datetime(campaigns['end_date']).dt.date
+            campaigns['start_date'] = pd.to_datetime(campaigns['start_date'])
+            campaigns['end_date'] = pd.to_datetime(campaigns['end_date'])
+            # Convert to date objects if they're timestamps
+            if len(campaigns) > 0 and isinstance(campaigns['start_date'].iloc[0], pd.Timestamp):
+                campaigns['start_date'] = campaigns['start_date'].dt.date
+                campaigns['end_date'] = campaigns['end_date'].dt.date
         else:
             return df
         
         # Process each row
         for idx, row in df.iterrows():
-            current_date = row['date'].date() if isinstance(row['date'], pd.Timestamp) else row['date']
+            # Safe date conversion
+            if isinstance(row['date'], pd.Timestamp):
+                current_date = row['date'].date()
+            elif hasattr(row['date'], 'date') and callable(getattr(row['date'], 'date', None)):
+                current_date = row['date'].date()
+            else:
+                current_date = row['date']  # Already a date object
             
             # Find active campaigns
             active_campaigns = campaigns[
@@ -695,25 +739,26 @@ class UltimateInventoryIntelligence:
     # DEEP LEARNING MODELS (NEW!)
     # ========================================================================
     
-    def create_sequences(self, data: np.array, seq_length: int = 14) -> Tuple[np.array, np.array]:
+    def create_sequences(self, X_data: np.array, y_data: np.array, seq_length: int = 14) -> Tuple[np.array, np.array]:
         """
         Create sequences for time series deep learning
         
         Args:
-            data: Time series data
+            X_data: Feature matrix (samples, features)
+            y_data: Target values (samples,)
             seq_length: Length of input sequence
         
         Returns:
-            X: Input sequences
-            y: Target values
+            X: Input sequences (samples, seq_length, features)
+            y: Target values (samples,)
         """
-        X, y = [], []
+        X_seq, y_seq = [], []
         
-        for i in range(len(data) - seq_length):
-            X.append(data[i:i+seq_length])
-            y.append(data[i+seq_length])
+        for i in range(len(X_data) - seq_length):
+            X_seq.append(X_data[i:i+seq_length])
+            y_seq.append(y_data[i+seq_length])
         
-        return np.array(X), np.array(y)
+        return np.array(X_seq), np.array(y_seq)
     
     def build_lstm_model(self, input_shape: Tuple, num_features: int) -> Model:
         """
@@ -873,7 +918,7 @@ class UltimateInventoryIntelligence:
             y_scaled = scaler_y.fit_transform(y_data.reshape(-1, 1)).flatten()
             
             # Create sequences
-            X_seq, y_seq = self.create_sequences(X_scaled, self.sequence_length)
+            X_seq, y_seq = self.create_sequences(X_scaled, y_scaled, self.sequence_length)
             
             if len(X_seq) == 0:
                 return None, None
@@ -970,7 +1015,7 @@ class UltimateInventoryIntelligence:
             y_scaled = scaler_y.fit_transform(y_data.reshape(-1, 1)).flatten()
             
             # Create sequences
-            X_seq, y_seq = self.create_sequences(X_scaled, self.sequence_length)
+            X_seq, y_seq = self.create_sequences(X_scaled, y_scaled, self.sequence_length)
             
             if len(X_seq) == 0:
                 return None, None
@@ -1067,7 +1112,7 @@ class UltimateInventoryIntelligence:
             y_scaled = scaler_y.fit_transform(y_data.reshape(-1, 1)).flatten()
             
             # Create sequences
-            X_seq, y_seq = self.create_sequences(X_scaled, self.sequence_length)
+            X_seq, y_seq = self.create_sequences(X_scaled, y_scaled, self.sequence_length)
             
             if len(X_seq) == 0:
                 return None, None
@@ -1438,16 +1483,22 @@ class UltimateInventoryIntelligence:
         try:
             xgb_model, xgb_metrics = self.train_xgboost_model(item_id)
             if xgb_model and xgb_metrics:
-                last_date = self.sales_data[self.sales_data['item_id'] == item_id]['date'].max()
+                # Get the last row of actual data to use as template
+                last_row = self.sales_data[self.sales_data['item_id'] == item_id].iloc[-1:].copy()
+                
+                # Create future dates
+                last_date = last_row['date'].iloc[0]
                 future_dates = pd.date_range(start=last_date + timedelta(days=1), periods=days_ahead)
                 
-                future_df = pd.DataFrame({
-                    'date': future_dates,
-                    'item_id': item_id,
-                    'quantity_sold': 0
-                })
+                # Replicate last row for each future date
+                future_df = pd.concat([last_row] * days_ahead, ignore_index=True)
+                future_df['date'] = future_dates
+                future_df['quantity_sold'] = 0
                 
+                # Create features (this will include all columns)
                 future_df = self.create_advanced_features(future_df)
+                
+                # Select only the feature columns that were used in training
                 X_future = future_df[xgb_metrics['feature_cols']]
                 
                 xgb_pred = xgb_model.predict(X_future).mean()
@@ -1461,15 +1512,19 @@ class UltimateInventoryIntelligence:
         try:
             lgb_model, lgb_metrics = self.train_lightgbm_model(item_id)
             if lgb_model and lgb_metrics:
-                last_date = self.sales_data[self.sales_data['item_id'] == item_id]['date'].max()
+                # Get the last row of actual data to use as template
+                last_row = self.sales_data[self.sales_data['item_id'] == item_id].iloc[-1:].copy()
+                
+                # Create future dates
+                last_date = last_row['date'].iloc[0]
                 future_dates = pd.date_range(start=last_date + timedelta(days=1), periods=days_ahead)
                 
-                future_df = pd.DataFrame({
-                    'date': future_dates,
-                    'item_id': item_id,
-                    'quantity_sold': 0
-                })
+                # Replicate last row for each future date
+                future_df = pd.concat([last_row] * days_ahead, ignore_index=True)
+                future_df['date'] = future_dates
+                future_df['quantity_sold'] = 0
                 
+                # Create features
                 future_df = self.create_advanced_features(future_df)
                 X_future = future_df[lgb_metrics['feature_cols']]
                 
@@ -1484,15 +1539,19 @@ class UltimateInventoryIntelligence:
         try:
             gbm_model, gbm_metrics = self.train_gbm_model(item_id)
             if gbm_model and gbm_metrics:
-                last_date = self.sales_data[self.sales_data['item_id'] == item_id]['date'].max()
+                # Get the last row of actual data to use as template
+                last_row = self.sales_data[self.sales_data['item_id'] == item_id].iloc[-1:].copy()
+                
+                # Create future dates
+                last_date = last_row['date'].iloc[0]
                 future_dates = pd.date_range(start=last_date + timedelta(days=1), periods=days_ahead)
                 
-                future_df = pd.DataFrame({
-                    'date': future_dates,
-                    'item_id': item_id,
-                    'quantity_sold': 0
-                })
+                # Replicate last row for each future date
+                future_df = pd.concat([last_row] * days_ahead, ignore_index=True)
+                future_df['date'] = future_dates
+                future_df['quantity_sold'] = 0
                 
+                # Create features
                 future_df = self.create_advanced_features(future_df)
                 X_future = future_df[gbm_metrics['feature_cols']]
                 
@@ -1677,7 +1736,29 @@ class UltimateInventoryIntelligence:
         print(f"{'='*70}\n")
         
         prep_list = []
-        menu_items = self.bom['menu_item_id'].unique()
+        # Flexible column name detection for BOM
+        if 'menu_item_id' in self.bom.columns:
+            menu_item_col = 'menu_item_id'
+            raw_item_col = 'raw_item_id'
+        elif 'id' in self.bom.columns:
+            menu_item_col = 'id'
+            # Find raw item column
+            if 'item_id' in self.bom.columns:
+                raw_item_col = 'item_id'
+            elif 'raw_item_id' in self.bom.columns:
+                raw_item_col = 'raw_item_id'
+            elif 'ingredient_id' in self.bom.columns:
+                raw_item_col = 'ingredient_id'
+            else:
+                print(f"   ⚠️  Cannot identify raw item column in BOM")
+                print(f"   Available columns: {self.bom.columns.tolist()}")
+                return pd.DataFrame()
+        else:
+            print(f"   ⚠️  BOM structure not recognized")
+            print(f"   Available columns: {self.bom.columns.tolist()}")
+            return pd.DataFrame()
+        
+        menu_items = self.bom[menu_item_col].unique()
         
         for menu_item_id in menu_items[:20]:  # Limit for demo
             try:
@@ -1689,10 +1770,10 @@ class UltimateInventoryIntelligence:
                 daily_demand = forecast['ensemble_prediction']
                 total_demand = daily_demand * days_ahead
                 
-                recipe = self.bom[self.bom['menu_item_id'] == menu_item_id]
+                recipe = self.bom[self.bom[menu_item_col] == menu_item_id]
                 
                 for _, ingredient in recipe.iterrows():
-                    raw_item_id = ingredient['raw_item_id']
+                    raw_item_id = ingredient[raw_item_col]
                     quantity_per_unit = ingredient['quantity']
                     unit = ingredient.get('unit', 'units')
                     
