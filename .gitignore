@@ -7,3 +7,5 @@ data/Inventory_Management/*.csv
 __pycache__/
 *.pyc
 
+reports/
+*csv

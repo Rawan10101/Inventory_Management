@@ -20,21 +20,31 @@ import warnings
 warnings.filterwarnings('ignore')
 
 # Statistical Models
-from statsmodels.tsa.arima.model import ARIMA
-from statsmodels.tsa.statespace.sarimax import SARIMAX
+try:
+    from statsmodels.tsa.arima.model import ARIMA
+    STATSMODELS_AVAILABLE = True
+except ImportError:
+    STATSMODELS_AVAILABLE = False
+    print("Warning: statsmodels not installed. Run: pip install statsmodels")
 
 # Prophet
 try:
-    from prophet import Prophet
+    from prophet import Prophet  # type: ignore
     PROPHET_AVAILABLE = True
 except ImportError:
     PROPHET_AVAILABLE = False
+    Prophet = None  # type: ignore
     print("Warning: Prophet not installed. Run: pip install prophet")
 
 # Machine Learning
-from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from sklearn.model_selection import train_test_split
+try:
+    from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+    from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+    from sklearn.model_selection import train_test_split
+    SKLEARN_AVAILABLE = True
+except ImportError:
+    SKLEARN_AVAILABLE = False
+    print("Warning: scikit-learn not installed. Run: pip install scikit-learn")
 
 # XGBoost
 try:

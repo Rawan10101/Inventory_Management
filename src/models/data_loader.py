@@ -43,11 +43,31 @@ class DataLoader:
         """
         file_path = f"{self.data_path}/{filename}"
         try:
-            df = pd.read_csv(file_path, parse_dates=parse_dates, low_memory=False)
+            df = self._read_csv_with_fallback(file_path, parse_dates=parse_dates)
             print(f"Successfully loaded {filename}: {len(df)} rows")
             return df
         except FileNotFoundError:
             raise FileNotFoundError(f"File not found: {file_path}")
+
+    def _read_csv_with_fallback(self, file_path: str, parse_dates: Optional[List[str]] = None) -> pd.DataFrame:
+        encodings = ["utf-8", "utf-8-sig", "cp1252", "latin1"]
+        for encoding in encodings:
+            try:
+                return pd.read_csv(
+                    file_path,
+                    parse_dates=parse_dates,
+                    low_memory=False,
+                    encoding=encoding,
+                )
+            except UnicodeDecodeError:
+                continue
+        return pd.read_csv(
+            file_path,
+            parse_dates=parse_dates,
+            low_memory=False,
+            encoding="latin1",
+            encoding_errors="ignore",
+        )
 
     def load_orders(self) -> pd.DataFrame:
         """Load orders, convert timestamp, and keep only closed orders."""

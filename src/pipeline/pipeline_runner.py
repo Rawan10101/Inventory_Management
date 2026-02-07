@@ -88,8 +88,17 @@ def _prepare_bom(bom_df: pd.DataFrame) -> pd.DataFrame:
 
     bom = bom_df.copy()
 
-    if "quantity_per_serving" not in bom.columns and "ingredient_quantity" in bom.columns:
-        bom = bom.rename(columns={"ingredient_quantity": "quantity_per_serving"})
+    if "menu_item_id" not in bom.columns and "parent_sku_id" in bom.columns:
+        bom = bom.rename(columns={"parent_sku_id": "menu_item_id"})
+
+    if "ingredient_id" not in bom.columns and "sku_id" in bom.columns:
+        bom = bom.rename(columns={"sku_id": "ingredient_id"})
+
+    if "quantity_per_serving" not in bom.columns:
+        if "ingredient_quantity" in bom.columns:
+            bom = bom.rename(columns={"ingredient_quantity": "quantity_per_serving"})
+        elif "quantity" in bom.columns:
+            bom = bom.rename(columns={"quantity": "quantity_per_serving"})
 
     required_cols = [
         "menu_item_id",

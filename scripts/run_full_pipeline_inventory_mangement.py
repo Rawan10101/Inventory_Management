@@ -1,5 +1,5 @@
 """
-Run the full Fresh Flow pipeline from the command line.
+Run the full Fresh Flow pipeline using data/inventory_mangement.
 """
 
 from __future__ import annotations
@@ -17,8 +17,8 @@ from pipeline_runner import run_pipeline
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run the Fresh Flow pipeline")
-    parser.add_argument("--data-dir", default=str(ROOT_DIR / "data"), help="Directory containing CSVs")
+    parser = argparse.ArgumentParser(description="Run the Fresh Flow pipeline (inventory_mangement)")
+    parser.add_argument("--data-dir", default="data/inventory_mangement", help="Directory containing CSVs")
     parser.add_argument("--output-dir", default="reports", help="Output directory for reports")
     parser.add_argument("--forecast-horizon", default="daily", help="Forecast horizon")
     parser.add_argument("--prefer-advanced", action="store_true", help="Try advanced forecaster if available")
