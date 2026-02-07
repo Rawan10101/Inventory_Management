@@ -34,10 +34,14 @@ STATE_FILE = DATA_DIR_DEFAULT / ".system_state.json"
 BACKUP_DIR = DATA_DIR_DEFAULT / "backups"
 
 PIPELINE_DIR = ROOT_DIR / "src" / "pipeline"
+MODELS_DIR = ROOT_DIR / "src" / "models"
 if str(PIPELINE_DIR) not in sys.path:
     sys.path.append(str(PIPELINE_DIR))
+if str(MODELS_DIR) not in sys.path:
+    sys.path.append(str(MODELS_DIR))
 
 from pipeline_runner import run_pipeline
+from data_loader import DataLoader
 
 DATASETS = {
     "Sales orders": {
@@ -102,11 +106,11 @@ def _read_csv_with_fallback(source) -> pd.DataFrame:
     encodings = ["utf-8", "utf-8-sig", "cp1252", "latin1"]
     for enc in encodings:
         try:
-            return pd.read_csv(source, encoding=enc)
+            return pd.read_csv(source, encoding=enc, low_memory=False)
         except UnicodeDecodeError:
             continue
     try:
-        return pd.read_csv(source, encoding="latin1", encoding_errors="ignore")
+        return pd.read_csv(source, encoding="latin1", encoding_errors="ignore", low_memory=False)
     except Exception:
         return pd.DataFrame()
 
@@ -333,19 +337,33 @@ def _confidence_label(series: pd.Series) -> str:
 
 def _load_inventory_snapshot(data_dir: Path) -> pd.DataFrame:
     inv = _safe_read_csv(Path(data_dir) / "fct_inventory_reports.csv")
+    required_cols = {"item_id", "quantity_on_hand"}
+
+    if not inv.empty and required_cols.issubset(inv.columns):
+        if "report_date" in inv.columns:
+            inv["report_date"] = pd.to_datetime(inv["report_date"], errors="coerce")
+            latest_date = inv["report_date"].max()
+            inv = inv[inv["report_date"] == latest_date]
+
+        items_dim = _safe_read_csv(Path(data_dir) / "dim_items.csv")
+        if not items_dim.empty and "id" in items_dim.columns and "title" in items_dim.columns:
+            inv = inv.merge(items_dim[["id", "title"]], left_on="item_id", right_on="id", how="left")
+            inv = inv.rename(columns={"title": "item_name"})
+        return inv
+
+    return pd.DataFrame()
+
+
+def _inventory_schema_issue(data_dir: Path) -> str | None:
+    inv_path = Path(data_dir) / "fct_inventory_reports.csv"
+    inv = _safe_read_csv(inv_path)
     if inv.empty:
-        return pd.DataFrame()
-    if "report_date" in inv.columns:
-        inv["report_date"] = pd.to_datetime(inv["report_date"], errors="coerce")
-        latest_date = inv["report_date"].max()
-        inv = inv[inv["report_date"] == latest_date]
-
-    items_dim = _safe_read_csv(Path(data_dir) / "dim_items.csv")
-    if not items_dim.empty and "id" in items_dim.columns and "title" in items_dim.columns:
-        inv = inv.merge(items_dim[["id", "title"]], left_on="item_id", right_on="id", how="left")
-        inv = inv.rename(columns={"title": "item_name"})
-
-    return inv
+        return "Inventory report is missing or empty. Upload an inventory report to show ordering needs."
+    missing = {"item_id", "quantity_on_hand"} - set(inv.columns)
+    if missing:
+        missing_cols = ", ".join(sorted(missing))
+        return f"Inventory report missing columns: {missing_cols}"
+    return None
 
 
 def _to_excel_bytes(df: pd.DataFrame) -> bytes | None:
@@ -469,10 +487,19 @@ with tabs[0]:
 
     st.subheader("What to Order")
     if not forecast_df.empty:
+        schema_issue = _inventory_schema_issue(Path(data_dir))
         inventory_df = _load_inventory_snapshot(Path(data_dir))
-        if not inventory_df.empty:
+        if schema_issue:
+            st.info(schema_issue)
+        elif not inventory_df.empty:
             order_days = 3
             order_df = forecast_df.merge(inventory_df, on="item_id", how="left")
+            if "item_name" not in order_df.columns:
+                if "title" in order_df.columns:
+                    order_df["item_name"] = order_df["title"]
+                else:
+                    order_df["item_name"] = order_df["item_id"].astype(str)
+            order_df["item_name"] = order_df["item_name"].fillna(order_df["item_id"].astype(str))
             order_df["current_stock"] = order_df.get("quantity_on_hand", 0).fillna(0)
             order_df["required_qty"] = (order_df["predicted_daily_demand"] * order_days).round(0)
             order_df["qty_to_order"] = (order_df["required_qty"] - order_df["current_stock"]).clip(lower=0)

@@ -190,7 +190,7 @@ class DataLoader:
         print("Prepared daily sales dataset (ML-ready)")
         return daily_sales
 
-    def prepare_inventory_snapshot(self) -> pd.DataFrame:
+    def prepare_inventory_snapshot(self, allow_mock: bool = False) -> pd.DataFrame:
         """
         Prepares current inventory snapshot for items managed in inventory.
         Creates realistic mock inventory based on sales patterns if actual data unavailable.
@@ -198,8 +198,13 @@ class DataLoader:
         inventory_reports = self.load_inventory_reports()
         items = self.load_items()
 
-        # Keep only inventory-managed items
-        inventory_items = items[items["manage_inventory"] == 1].copy()
+        # Keep only inventory-managed items (fallback to all items if flag is sparse)
+        if "manage_inventory" in items.columns:
+            inventory_items = items[items["manage_inventory"] == 1].copy()
+            if inventory_items.empty or len(inventory_items) < max(5, int(len(items) * 0.01)):
+                inventory_items = items.copy()
+        else:
+            inventory_items = items.copy()
 
         if not inventory_reports.empty and 'item_id' in inventory_reports.columns and len(inventory_reports) > 0:
             # Use actual inventory reports if available
@@ -212,61 +217,12 @@ class DataLoader:
             inventory = inventory.rename(columns={"quantity_on_hand": "current_stock"})
             print("✅ Prepared inventory snapshot from fct_inventory_reports (ML-ready)")
         else:
-            # Fallback: create realistic mock inventory based on sales patterns
-            print("⚠️  fct_inventory_reports is empty - creating mock inventory from sales data")
-            
-            inventory = inventory_items.copy()
-            inventory = inventory.rename(columns={"id": "item_id"})
-            
-            # Calculate realistic stock levels based on sales data
-            if self.sales_data is not None and len(self.sales_data) > 0:
-                # Calculate average daily sales per item
-                sales_summary = self.sales_data.groupby('item_id').agg({
-                    'quantity_sold': ['mean', 'std', 'max']
-                }).reset_index()
-                sales_summary.columns = ['item_id', 'avg_daily_sales', 'std_daily_sales', 'max_daily_sales']
-                
-                # Merge with inventory items
-                inventory = inventory.merge(sales_summary, on='item_id', how='left')
-                
-                # Create realistic stock levels:
-                # Stock = 7-14 days of average sales + safety buffer
-                # This simulates a merchant keeping 1-2 weeks of inventory
-                np.random.seed(42)  # For reproducibility
-                inventory['days_of_stock'] = np.random.uniform(7, 14, len(inventory))
-                inventory['current_stock'] = (
-                    inventory['avg_daily_sales'].fillna(0) * inventory['days_of_stock']
-                ).round(0).astype(int)
-                
-                # Add some randomness to make it realistic (some items overstocked, some understocked)
-                random_factor = np.random.uniform(0.7, 1.3, len(inventory))
-                inventory['current_stock'] = (inventory['current_stock'] * random_factor).round(0).astype(int)
-                
-                # Ensure minimum stock of 0
-                inventory['current_stock'] = inventory['current_stock'].clip(lower=0)
-                
-                # Some items should be out of stock (realistic scenario)
-                out_of_stock_mask = np.random.random(len(inventory)) < 0.15  # 15% out of stock
-                inventory.loc[out_of_stock_mask, 'current_stock'] = 0
-                
-                print(f"   Generated stock levels based on sales patterns:")
-                print(f"   - Average stock: {inventory['current_stock'].mean():.0f} units")
-                print(f"   - Items in stock: {(inventory['current_stock'] > 0).sum()}/{len(inventory)}")
-                print(f"   - Out of stock: {(inventory['current_stock'] == 0).sum()} items")
-            else:
-                # Last resort: use simple defaults
-                print("   Warning: No sales data available, using default stock levels")
-                inventory['current_stock'] = 50  # Default reasonable stock
-            
-            # Handle unit_cost from price
-            if 'price' in inventory.columns:
-                # Use price as unit_cost estimate (assume 40% profit margin, so cost = 60% of price)
-                inventory['unit_cost'] = inventory['price'] * 0.6
-            else:
-                inventory['unit_cost'] = 0
-            
-            # Calculate total_value
-            inventory['total_value'] = inventory['current_stock'] * inventory['unit_cost']
+            if not allow_mock:
+                print("⚠️  fct_inventory_reports missing or invalid - inventory snapshot not generated")
+                return pd.DataFrame()
+
+            print("⚠️  fct_inventory_reports missing - mock inventory is disabled by policy")
+            return pd.DataFrame()
 
         print(f"📦 Inventory snapshot ready: {len(inventory)} items")
         return inventory

@@ -55,7 +55,7 @@ def _prepare_inventory(inventory_df: pd.DataFrame) -> pd.DataFrame:
         elif "quantity" in inv.columns:
             inv["quantity_on_hand"] = inv["quantity"]
         else:
-            inv["quantity_on_hand"] = 0
+            return pd.DataFrame()
 
     if "item_name" not in inv.columns:
         if "title" in inv.columns:
@@ -64,17 +64,13 @@ def _prepare_inventory(inventory_df: pd.DataFrame) -> pd.DataFrame:
             inv["item_name"] = "Unknown"
 
     if "unit_cost" not in inv.columns:
-        if "price" in inv.columns:
-            inv["unit_cost"] = inv["price"] * 0.6
-        else:
-            inv["unit_cost"] = 10.0
+        inv["unit_cost"] = pd.NA
 
     if "total_value" not in inv.columns:
         inv["total_value"] = inv["quantity_on_hand"] * inv["unit_cost"]
 
     if "days_until_expiration" not in inv.columns:
-        rng = np.random.default_rng(42)
-        inv["days_until_expiration"] = rng.integers(1, 15, size=len(inv))
+        inv["days_until_expiration"] = pd.NA
 
     if "report_date" not in inv.columns:
         inv["report_date"] = pd.Timestamp.utcnow().normalize()
@@ -173,14 +169,25 @@ def run_pipeline(
 
     expiration_manager = ExpirationManager(forecaster)
 
-    if inventory_for_expiration.empty:
+    if inventory_for_expiration.empty or "days_until_expiration" not in inventory_for_expiration.columns:
         prioritized = pd.DataFrame()
         recommendations = pd.DataFrame()
         at_risk = pd.DataFrame()
     else:
-        prioritized = expiration_manager.prioritize_inventory(inventory_for_expiration, forecast_df)
-        recommendations = expiration_manager.recommend_actions(prioritized)
-        at_risk = recommendations[recommendations["risk_category"].isin(["critical", "high", "medium"])]
+        inventory_for_expiration["days_until_expiration"] = pd.to_numeric(
+            inventory_for_expiration["days_until_expiration"], errors="coerce"
+        )
+        inventory_for_expiration = inventory_for_expiration[
+            inventory_for_expiration["days_until_expiration"].notna()
+        ]
+        if inventory_for_expiration.empty:
+            prioritized = pd.DataFrame()
+            recommendations = pd.DataFrame()
+            at_risk = pd.DataFrame()
+        else:
+            prioritized = expiration_manager.prioritize_inventory(inventory_for_expiration, forecast_df)
+            recommendations = expiration_manager.recommend_actions(prioritized)
+            at_risk = recommendations[recommendations["risk_category"].isin(["critical", "high", "medium"])]
 
     promotions = []
     if not at_risk.empty:
