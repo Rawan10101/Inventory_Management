@@ -14,8 +14,38 @@ class PrepCalculator:
     """
     
     def __init__(self, bom_df: pd.DataFrame, inventory_df: pd.DataFrame):
-        self.bom = bom_df
+        self.bom = self._normalize_bom(bom_df)
         self.inventory = inventory_df
+
+    def _normalize_bom(self, bom_df: pd.DataFrame) -> pd.DataFrame:
+        if bom_df is None or bom_df.empty:
+            return pd.DataFrame()
+
+        df = bom_df.copy()
+
+        # Common alternative column mappings
+        if "menu_item_id" not in df.columns and "parent_sku_id" in df.columns:
+            df["menu_item_id"] = df["parent_sku_id"]
+        if "ingredient_id" not in df.columns and "sku_id" in df.columns:
+            df["ingredient_id"] = df["sku_id"]
+        if "quantity_per_serving" not in df.columns and "quantity" in df.columns:
+            df["quantity_per_serving"] = df["quantity"]
+
+        # Fallback defaults
+        if "ingredient_name" not in df.columns:
+            df["ingredient_name"] = df.get("ingredient_id", pd.Series(["Unknown"] * len(df))).astype(str)
+        if "stock_unit" not in df.columns:
+            df["stock_unit"] = "unit"
+        if "unit_cost" not in df.columns:
+            df["unit_cost"] = 0.0
+        if "shelf_life_days" not in df.columns:
+            df["shelf_life_days"] = 3
+
+        required = {"menu_item_id", "ingredient_id", "quantity_per_serving"}
+        if not required.issubset(df.columns):
+            return pd.DataFrame()
+
+        return df
     
     def calculate_prep_quantities(self, 
                                   demand_forecast: pd.DataFrame, 
@@ -24,6 +54,13 @@ class PrepCalculator:
         """
         Calculate ingredient prep needs based on forecasted menu item demand
         """
+        if demand_forecast is None or demand_forecast.empty:
+            return pd.DataFrame()
+        if self.bom is None or self.bom.empty:
+            return pd.DataFrame()
+        if "item_id" not in demand_forecast.columns or "predicted_daily_demand" not in demand_forecast.columns:
+            return pd.DataFrame()
+
         prep_list = []
         
         # Group forecast by menu item
