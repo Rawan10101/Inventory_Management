@@ -23,7 +23,11 @@ Money earned when customers **buy food or products** from merchants.
 
 
 <img width="1365" height="675" alt="image" src="https://github.com/user-attachments/assets/f3fe0c79-4722-44c2-8ff2-50e05b920393" />
+
+
 <img width="1354" height="630" alt="image (1)" src="https://github.com/user-attachments/assets/f33a1646-7382-4658-bf3f-a5be8a0c386d" />
+
+
 <img width="1357" height="602" alt="image (2)" src="https://github.com/user-attachments/assets/9c7ac6cc-6acb-47b4-adc7-627ec78241ca" />
 
 
