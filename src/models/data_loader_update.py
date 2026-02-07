@@ -185,7 +185,7 @@ class DataLoader:
         print("Prepared daily sales dataset (ML-ready)")
         return daily_sales
 
-    def prepare_inventory_snapshot(self) -> pd.DataFrame:
+    def prepare_inventory_snapshot(self, allow_mock: bool = False) -> pd.DataFrame:
         """
         Prepares current inventory snapshot for items managed in inventory.
         Falls back to creating snapshot from items table if inventory reports unavailable.
@@ -193,8 +193,13 @@ class DataLoader:
         inventory_reports = self.load_inventory_reports()
         items = self.load_items()
 
-        # Keep only inventory-managed items
-        inventory_items = items[items["manage_inventory"] == 1].copy()
+        # Keep only inventory-managed items (fallback to all items if flag is sparse)
+        if "manage_inventory" in items.columns:
+            inventory_items = items[items["manage_inventory"] == 1].copy()
+            if inventory_items.empty or len(inventory_items) < max(5, int(len(items) * 0.01)):
+                inventory_items = items.copy()
+        else:
+            inventory_items = items.copy()
 
         if not inventory_reports.empty and 'item_id' in inventory_reports.columns:
             # Use actual inventory reports if available
@@ -207,38 +212,12 @@ class DataLoader:
             inventory = inventory.rename(columns={"quantity_on_hand": "current_stock"})
             print("Prepared inventory snapshot from fct_inventory_reports (ML-ready)")
         else:
-            # Fallback: create snapshot from items table
-            print("Creating inventory snapshot from dim_items (fallback)")
-            print(f"Available columns in dim_items: {inventory_items.columns.tolist()}")
-            
-            inventory = inventory_items.copy()
-            
-            # Rename id to item_id
-            inventory = inventory.rename(columns={"id": "item_id"})
-            
-            # Check what quantity-related columns exist and rename appropriately
-            if 'quantity' in inventory.columns:
-                inventory = inventory.rename(columns={'quantity': 'current_stock'})
-            elif 'stock_quantity' in inventory.columns:
-                inventory = inventory.rename(columns={'stock_quantity': 'current_stock'})
-            elif 'qty' in inventory.columns:
-                inventory = inventory.rename(columns={'qty': 'current_stock'})
-            else:
-                # No quantity column found, create a default one
-                print("Warning: No quantity column found in dim_items, using default value of 0")
-                inventory['current_stock'] = 0
-            
-            # Handle unit_cost
-            if 'unit_cost' not in inventory.columns:
-                if 'cost' in inventory.columns:
-                    inventory = inventory.rename(columns={'cost': 'unit_cost'})
-                elif 'price' in inventory.columns:
-                    inventory = inventory.rename(columns={'price': 'unit_cost'})
-                else:
-                    inventory['unit_cost'] = 0
-            
-            # Calculate total_value
-            inventory['total_value'] = inventory['current_stock'] * inventory['unit_cost']
+            if not allow_mock:
+                print("Warning: fct_inventory_reports missing or invalid - inventory snapshot not generated")
+                return pd.DataFrame()
+
+            print("Warning: mock inventory is disabled by policy")
+            return pd.DataFrame()
 
         print(f"Inventory snapshot ready: {len(inventory)} items")
         return inventory
