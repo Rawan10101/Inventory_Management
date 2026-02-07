@@ -840,23 +840,66 @@ class EnhancedDataLoader:
         
         return pd.DataFrame(summary_data).sort_values('loaded', ascending=False)
 
-
-# ============================================================================
-# EXAMPLE USAGE
-# ============================================================================
-
-if __name__ == "__main__":
-    print("""
-    ╔════════════════════════════════════════════════════════════════════════╗
-    ║                                                                        ║
-    ║     ENHANCED DATA LOADER v2.1 - PURCHASE-SALES INVENTORY METHOD        ║
-    ║                                                                        ║
-    ║  NEW: Real inventory calculation from Invoice Purchases - Order Sales  ║
-    ║  Formula: Current Stock = Total Purchased - Total Sold                 ║
-    ║                                                                        ║
-    ╚════════════════════════════════════════════════════════════════════════╝
-    """)
+def create_item_mapping(self) -> Dict[int, str]:
+    """
+    Create mapping between simple IDs (1-40) and real product names
     
+    Since there's no direct mapping, we need to create one intelligently
+    """
+    print("\n🗺️  CREATING ITEM NAME MAPPING...")
+    
+    # Load both item systems
+    simple_items = self.load_items()  # IDs 1-40
+    real_items = self.load_menu_items()  # Real product names
+    
+    if simple_items.empty or real_items.empty:
+        print("   ⚠️  Cannot create mapping - missing item data")
+        return {}
+    
+    # Create a mapping dictionary
+    item_mapping = {}
+    
+    # Strategy 1: If same number of items, map sequentially
+    if len(simple_items) <= len(real_items):
+        print(f"   Mapping {len(simple_items)} simple items to {len(real_items)} real items")
+        
+        for i, (_, simple_row) in enumerate(simple_items.iterrows()):
+            simple_id = simple_row['id']
+            simple_title = simple_row['title']
+            
+            if i < len(real_items):
+                real_title = real_items.iloc[i]['title']
+                real_price = real_items.iloc[i].get('price', simple_row.get('price', 50))
+                
+                item_mapping[simple_id] = {
+                    'simple_name': simple_title,
+                    'real_name': real_title,
+                    'real_price': real_price,
+                    'mapping_type': 'sequential'
+                }
+                
+                print(f"     {simple_title} (ID: {simple_id}) → {real_title}")
+    
+    # Store the mapping
+    self.item_mapping = item_mapping
+    
+    print(f"   ✅ Created mapping for {len(item_mapping)} items")
+    return item_mapping
+
+def get_real_item_name(self, item_id: int) -> str:
+    """Get real product name for a simple item ID"""
+    if hasattr(self, 'item_mapping') and item_id in self.item_mapping:
+        return self.item_mapping[item_id]['real_name']
+    
+    # Fallback to simple name
+    if hasattr(self, 'sales_data') and 'title' in self.sales_data.columns:
+        matches = self.sales_data[self.sales_data['item_id'] == item_id]['title'].unique()
+        if len(matches) > 0:
+            return matches[0]
+    
+    return f"Item {item_id}"
+if __name__ == "__main__":
+
     # Example usage
     loader = EnhancedDataLoader("data/Inventory_Management")
     

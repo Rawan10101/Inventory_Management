@@ -157,6 +157,13 @@ def run_pipeline(
     forecast_df = latest_rows[["item_id", "item_name", "place_id", "merchant_name"]].copy()
     forecast_df["forecast_date"] = last_date + timedelta(days=1)
     forecast_df["predicted_daily_demand"] = np.maximum(predictions, 0).round(2)
+    forecast_df = forecast_df.groupby('item_id', as_index=False).agg({
+    'item_name': 'first',
+    'predicted_daily_demand': 'sum',  # Total demand across all places
+    'forecast_date': 'first',
+    'place_id': 'nunique',  # Number of locations selling this item 
+    })
+    forecast_df = forecast_df.rename(columns={'place_id': 'sold_at_locations'})
 
     inventory_full = loader.prepare_inventory_snapshot()
     inventory_full = _prepare_inventory(inventory_full)
