@@ -55,7 +55,7 @@ try:
     from src.pipeline.pipeline_runner import run_pipeline
     HAS_PIPELINE = True
 
-    print("✓ Pipeline imported successfully from src.pipeline")
+    print(" Pipeline imported successfully from src.pipeline")
 except ImportError as e:
     print(f"First import attempt failed: {e}")
     try:
@@ -63,7 +63,7 @@ except ImportError as e:
         sys.path.insert(0, str(ROOT_DIR))
         from src.pipeline.pipeline_runner import run_pipeline
         HAS_PIPELINE = True
-        print("✓ Pipeline imported successfully via relative import")
+        print(" Pipeline imported successfully via relative import")
     except ImportError as e2:
         print(f"Could not import pipeline: {e2}")
         HAS_PIPELINE = False
@@ -101,7 +101,7 @@ DATASET_OPTIONS = list(DATASETS.keys()) + ["Other dataset"]
 # Page configuration
 st.set_page_config(
     page_title="Fresh Flow Dashboard",
-    page_icon="🌿",
+    page_icon="",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -426,12 +426,12 @@ def _load_latest_reports(report_dir: Path, data_dir: str) -> Dict[str, pd.DataFr
     reports = {}
     
     if not report_dir.exists():
-        print(f"⚠️ Report directory doesn't exist: {report_dir}")
+        print(f" Report directory doesn't exist: {report_dir}")
         return reports
     
     # Debug: List all CSV files
     csv_files = list(report_dir.glob("*.csv"))
-    print(f"📁 Found {len(csv_files)} CSV files in {report_dir}:")
+    print(f" Found {len(csv_files)} CSV files in {report_dir}:")
     for f in csv_files[:10]:  # Show first 10
         print(f"  - {f.name} (modified: {datetime.fromtimestamp(f.stat().st_mtime)})")
     
@@ -439,10 +439,10 @@ def _load_latest_reports(report_dir: Path, data_dir: str) -> Dict[str, pd.DataFr
         path = _latest_report(report_dir, prefix)
         if path and path.exists():
             try:
-                print(f"📖 Loading {prefix} from: {path}")
+                print(f" Loading {prefix} from: {path}")
                 df = _safe_read_csv(path)
                 if not df.empty:
-                    print(f"✅ Loaded {prefix}: {len(df)} rows, {len(df.columns)} columns")
+                    print(f" Loaded {prefix}: {len(df)} rows, {len(df.columns)} columns")
                     print(f"   Columns: {list(df.columns)}")
                     
                     # SPECIAL HANDLING FOR FORECAST DATA
@@ -497,22 +497,22 @@ def _load_latest_reports(report_dir: Path, data_dir: str) -> Dict[str, pd.DataFr
                     
                     reports[prefix] = df
                 else:
-                    print(f"⚠️  {prefix} is empty")
+                    print(f"  {prefix} is empty")
             except Exception as e:
-                print(f"❌ Error loading {prefix}: {e}")
+                print(f" Error loading {prefix}: {e}")
                 traceback.print_exc()
                 continue
         else:
-            print(f"⚠️  No {prefix} file found")
+            print(f"  No {prefix} file found")
     
     return reports
 
 def _create_forecast_chart(forecast_df: pd.DataFrame) -> go.Figure:
     if forecast_df.empty:
-        print("⚠️ Forecast dataframe is empty in chart function")
+        print(" Forecast dataframe is empty in chart function")
         return go.Figure()
     
-    print(f"🔍 Creating forecast chart with dataframe shape: {forecast_df.shape}")
+    print(f" Creating forecast chart with dataframe shape: {forecast_df.shape}")
     print(f"   Columns available: {list(forecast_df.columns)}")
     
     # Find product name column
@@ -551,7 +551,7 @@ def _create_forecast_chart(forecast_df: pd.DataFrame) -> go.Figure:
             pred_col = numeric_cols[0]
             print(f"   Using first numeric column '{pred_col}' as demand")
         else:
-            print(f"⚠️ No numeric columns found for demand")
+            print(f" No numeric columns found for demand")
             return go.Figure()
     else:
         print(f"   Using '{pred_col}' as demand column")
@@ -563,12 +563,12 @@ def _create_forecast_chart(forecast_df: pd.DataFrame) -> go.Figure:
         top_items = forecast_df.nlargest(top_n, pred_col).copy()
         print(f"   Selected top {top_n} items by {pred_col}")
     except Exception as e:
-        print(f"⚠️ Error sorting by {pred_col}: {e}")
+        print(f" Error sorting by {pred_col}: {e}")
         top_n = min(15, len(forecast_df))
         top_items = forecast_df.head(top_n).copy()
     
     if len(top_items) == 0:
-        print("⚠️ No items to display in chart")
+        print(" No items to display in chart")
         return go.Figure()
     
     # Prepare data for chart
@@ -611,7 +611,7 @@ def _create_forecast_chart(forecast_df: pd.DataFrame) -> go.Figure:
 
 def _create_risk_distribution(recommendations_df: pd.DataFrame) -> go.Figure:
     if recommendations_df.empty:
-        print("⚠️ Recommendations dataframe is empty")
+        print(" Recommendations dataframe is empty")
         return go.Figure()
     
     # Find risk category column
@@ -622,7 +622,7 @@ def _create_risk_distribution(recommendations_df: pd.DataFrame) -> go.Figure:
             break
     
     if risk_col is None:
-        print(f"⚠️ No risk category column found. Available columns: {list(recommendations_df.columns)}")
+        print(f" No risk category column found. Available columns: {list(recommendations_df.columns)}")
         return go.Figure()
     
     # Clean risk categories
@@ -664,7 +664,7 @@ def _create_risk_distribution(recommendations_df: pd.DataFrame) -> go.Figure:
         )
         return fig
     except Exception as e:
-        print(f"⚠️ Error creating risk chart: {e}")
+        print(f" Error creating risk chart: {e}")
         return go.Figure()
 
 def _load_daily_sales(data_dir: Path) -> pd.DataFrame:
@@ -712,7 +712,6 @@ def _load_daily_sales(data_dir: Path) -> pd.DataFrame:
 
     return daily
 
-<<<<<<< HEAD
 def _trend_label(series: pd.Series) -> str:
     series = series.dropna()
     if len(series) < 14:
@@ -790,20 +789,17 @@ def _style_risk(df: pd.DataFrame):
         return ""
 
     return df.style.applymap(_color, subset=["Risk"])
-=======
+
 def _read_upload(uploaded_file):
     """Read uploaded file (CSV or Excel)"""
     try:
         if uploaded_file.name.endswith('.csv'):
             return pd.read_csv(uploaded_file)
-        elif uploaded_file.name.endswith('.xlsx'):
+        if uploaded_file.name.endswith('.xlsx'):
             return pd.read_excel(uploaded_file)
-        else:
-            raise ValueError("Unsupported file format. Please upload CSV or Excel.")
-    except Exception as e:
-        raise ValueError(f"Error reading file: {str(e)}")
-
->>>>>>> 8f25c5359996a7e662d14dd708d8c929cb06c5c0
+        raise ValueError("Unsupported file format. Please upload CSV or Excel.")
+    except Exception as exc:
+        raise ValueError(f"Error reading file: {str(exc)}")
 def _to_excel_bytes(df: pd.DataFrame) -> bytes | None:
     try:
         buffer = io.BytesIO()
@@ -812,8 +808,6 @@ def _to_excel_bytes(df: pd.DataFrame) -> bytes | None:
         return buffer.getvalue()
     except Exception:
         return None
-
-<<<<<<< HEAD
 
 def _assistant_init_state() -> None:
     if "assistant_messages" not in st.session_state:
@@ -1452,21 +1446,20 @@ def _assistant_local_execute(action: dict) -> dict:
         message = f"Prep recommendations ready for the next {action.get('horizon', 'week')}."
         return {"assistantMessage": message, "structuredOutput": result}
     return {"assistantMessage": "Action not supported yet.", "structuredOutput": None}
-=======
+
+
 def _format_risk_badge(risk_level: str) -> str:
     """Format risk level as HTML badge"""
     risk_level = str(risk_level).lower()
-    if risk_level == 'critical':
+    if risk_level == "critical":
         return '<span class="status-badge status-critical">CRITICAL</span>'
-    elif risk_level == 'high':
+    if risk_level == "high":
         return '<span class="status-badge status-high">HIGH</span>'
-    elif risk_level == 'medium':
+    if risk_level == "medium":
         return '<span class="status-badge status-medium">MEDIUM</span>'
-    elif risk_level == 'low':
+    if risk_level == "low":
         return '<span class="status-badge status-low">LOW</span>'
-    else:
-        return f'<span class="status-badge">{risk_level}</span>'
->>>>>>> 8f25c5359996a7e662d14dd708d8c929cb06c5c0
+    return f'<span class="status-badge">{risk_level}</span>'
 
 # Main Header
 _assistant_init_state()
@@ -1481,9 +1474,8 @@ st.markdown("""
 
 # Sidebar
 with st.sidebar:
-    st.markdown('<h3 style="color: white; margin-bottom: 2rem;">⚙️ Configuration</h3>', unsafe_allow_html=True)
+    st.markdown('<h3 style="color: white; margin-bottom: 2rem;">Configuration</h3>', unsafe_allow_html=True)
     
-<<<<<<< HEAD
     data_dir = st.text_input("Data Folder", str(DATA_DIR_DEFAULT))
     output_dir = st.text_input("Reports Folder", str(REPORTS_DIR_DEFAULT))
     st.session_state.assistant_data_dir = data_dir
@@ -1509,27 +1501,21 @@ with st.sidebar:
     else:
         st.caption("Local mode stores assistant data in data/assistant.")
 
-=======
-    # Path inputs
-    data_dir = st.text_input("📁 Data Folder", str(DATA_DIR_DEFAULT))
-    output_dir = st.text_input("📊 Reports Folder", str(REPORTS_DIR_DEFAULT))
-    
->>>>>>> 8f25c5359996a7e662d14dd708d8c929cb06c5c0
     st.markdown("---")
     
     # Pipeline status
-    st.markdown('<h4 style="color: rgba(255,255,255,0.9);">🔄 Pipeline Status</h4>', unsafe_allow_html=True)
+    st.markdown('<h4 style="color: rgba(255,255,255,0.9);">Pipeline Status</h4>', unsafe_allow_html=True)
     
     if HAS_PIPELINE:
-        st.success("✅ Pipeline available")
+        st.success("Pipeline available")
     else:
-        st.error("❌ Pipeline not available")
+        st.error("Pipeline not available")
         st.info("Run the pipeline test first to ensure it works")
     
     st.markdown("---")
     
     # Auto Refresh
-    st.markdown('<h4 style="color: rgba(255,255,255,0.9);">🔄 Auto Refresh</h4>', unsafe_allow_html=True)
+    st.markdown('<h4 style="color: rgba(255,255,255,0.9);">Auto Refresh</h4>', unsafe_allow_html=True)
     
     auto_refresh = st.checkbox("Enable Auto Refresh", value=False)
     refresh_seconds = st.slider("Refresh Interval (seconds)", 30, 600, 120)
@@ -1542,7 +1528,7 @@ with st.sidebar:
     st.markdown("---")
     
     # Refresh button
-    if st.button("🔄 Refresh Dashboard", use_container_width=True):
+    if st.button("Refresh Dashboard", use_container_width=True):
         st.rerun()
     
     # Last update info
@@ -1550,7 +1536,7 @@ with st.sidebar:
     if state.get("last_refresh"):
         try:
             last_refresh = datetime.fromisoformat(state.get('last_refresh'))
-            st.caption(f"📅 Last update: {last_refresh.strftime('%Y-%m-%d %H:%M')}")
+            st.caption(f"Last update: {last_refresh.strftime('%Y-%m-%d %H:%M')}")
         except:
             pass
     
@@ -1560,35 +1546,30 @@ with st.sidebar:
         if reports.get('summary') is not None and not reports['summary'].empty:
             summary = reports['summary'].iloc[0].to_dict()
             st.markdown("---")
-            st.markdown("### 📊 Quick Stats")
+            st.markdown("### Quick Stats")
             
             forecast_date = summary.get('forecast_date', 'N/A')
             if isinstance(forecast_date, str) and len(forecast_date) > 10:
                 forecast_date = forecast_date[:10]
             
-            st.caption(f"📅 Forecast Date: {forecast_date}")
-            st.caption(f"📈 Total Demand: {summary.get('total_predicted_demand', 0):,.0f}")
-            st.caption(f"⚠️ At-Risk Items: {summary.get('at_risk_items_count', 0)}")
-            st.caption(f"✅ Real Names: {summary.get('real_names_applied', 'Yes')}")
+            st.caption(f"Forecast Date: {forecast_date}")
+            st.caption(f"Total Demand: {summary.get('total_predicted_demand', 0):,.0f}")
+            st.caption(f"At-Risk Items: {summary.get('at_risk_items_count', 0)}")
+            st.caption(f"Real Names: {summary.get('real_names_applied', 'Yes')}")
     except Exception as e:
         print(f"Sidebar error: {e}")
     
     st.markdown("---")
-    st.caption("🌿 Version 4.3 - Fixed Data Display")
+    st.caption("Version 4.3 - Fixed Data Display")
 
-<<<<<<< HEAD
 # Main tabs (no emojis)
 tabs = st.tabs(["Dashboard", "Forecasts", "Ingredients", "Upload Data", "Exports", "Assistant"])
-=======
-# Main tabs
-tabs = st.tabs(["📊 Dashboard", "📈 Forecasts", "🥗 Ingredients", "📤 Upload Data", "💾 Exports", "🔍 Debug"])
->>>>>>> 8f25c5359996a7e662d14dd708d8c929cb06c5c0
 
 with tabs[0]:  # Dashboard tab
     col1, col2 = st.columns([1, 3])
     with col1:
         if HAS_PIPELINE:
-            if st.button("🚀 Run Pipeline Now", use_container_width=True, type="primary"):
+            if st.button("Run Pipeline Now", use_container_width=True, type="primary"):
                 with st.spinner("Running pipeline with real product names..."):
                     try:
                         # Create progress bar
@@ -1615,7 +1596,7 @@ with tabs[0]:  # Dashboard tab
                         
                         progress_bar.progress(100)
                         
-                        st.success("✅ Pipeline completed successfully with real product names!")
+                        st.success("Pipeline completed successfully with real product names!")
                         
                         # Show quick summary
                         if isinstance(result, dict) and 'summary' in result:
@@ -1623,17 +1604,17 @@ with tabs[0]:  # Dashboard tab
                             st.markdown(f"""
                             <div class="success-message">
                                 <strong>Pipeline Summary:</strong><br>
-                                • Forecast Date: {summary.get('forecast_date', 'N/A')}<br>
-                                • Total Demand: {summary.get('total_predicted_demand', 0):,.0f} units<br>
-                                • At-Risk Items: {summary.get('at_risk_items_count', 0)}<br>
-                                • Real Names Applied: ✅ Yes
+                                Forecast Date: {summary.get('forecast_date', 'N/A')}<br>
+                                Total Demand: {summary.get('total_predicted_demand', 0):,.0f} units<br>
+                                At-Risk Items: {summary.get('at_risk_items_count', 0)}<br>
+                                Real Names Applied: Yes
                             </div>
                             """, unsafe_allow_html=True)
                         
                         st.rerun()
                         
                     except Exception as e:
-                        st.error(f"❌ Pipeline Error: {e}")
+                        st.error(f" Pipeline Error: {e}")
                         st.markdown(f"""
                         <div class="error-message">
                             <strong>Error Details:</strong><br>
@@ -1646,21 +1627,21 @@ with tabs[0]:  # Dashboard tab
                         """, unsafe_allow_html=True)
                         print(f"Pipeline error: {traceback.format_exc()}")
         else:
-            st.warning("⚠️ Pipeline not available. Using cached data.")
+            st.warning("Pipeline not available. Using cached data.")
     
     # Load reports
-    print(f"\n🔍 Loading reports from: {output_dir}")
+    print(f"\n Loading reports from: {output_dir}")
     reports = _load_latest_reports(Path(output_dir), data_dir)
     summary_df = reports.get("summary", pd.DataFrame())
     forecast_df = reports.get("forecast", pd.DataFrame())
     recommendations_df = reports.get("recommendations", pd.DataFrame())
     prep_df = reports.get("prep_plan", pd.DataFrame())
     
-    print(f"📊 Reports loaded: {list(reports.keys())}")
+    print(f" Reports loaded: {list(reports.keys())}")
     
     # DEBUG: Show what's in forecast_df
     if not forecast_df.empty:
-        st.markdown("### 🔍 Forecast Data Preview")
+        st.markdown("###  Forecast Data Preview")
         with st.expander("Show forecast data details", expanded=False):
             st.write(f"**Shape:** {forecast_df.shape}")
             st.write(f"**Columns:** {list(forecast_df.columns)}")
@@ -1670,17 +1651,17 @@ with tabs[0]:  # Dashboard tab
             # Check for product name columns
             name_cols = [col for col in forecast_df.columns if any(keyword in str(col).lower() for keyword in ['name', 'title', 'product', 'item'])]
             if name_cols:
-                st.write(f"✅ Name columns found: {name_cols}")
+                st.write(f" Name columns found: {name_cols}")
             
             # Check for demand columns
             demand_cols = [col for col in forecast_df.columns if any(keyword in str(col).lower() for keyword in ['predicted', 'demand', 'forecast', 'expected', 'units'])]
             if demand_cols:
-                st.write(f"✅ Demand columns found: {demand_cols}")
+                st.write(f" Demand columns found: {demand_cols}")
     
     if summary_df.empty:
         st.markdown("""
         <div class="alert-box alert-info">
-            <h4 style="margin: 0 0 0.5rem 0; color: white;">🚀 Welcome to Fresh Flow</h4>
+            <h4 style="margin: 0 0 0.5rem 0; color: white;"> Welcome to Fresh Flow</h4>
             <p style="margin: 0; color: rgba(255,255,255,0.9);">
                 No reports found yet. Click "Run Pipeline Now" to generate your first forecast.<br>
                 <strong>Real product names</strong> (Varm Chokolade, Sunny Hawaii, etc.) will be automatically applied.
@@ -1689,7 +1670,7 @@ with tabs[0]:  # Dashboard tab
         """, unsafe_allow_html=True)
     else:
         # Display KPIs from the actual pipeline output
-        st.markdown('<div class="section-header"><h2 class="section-title">📊 Key Performance Indicators</h2></div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header"><h2 class="section-title"> Key Performance Indicators</h2></div>', unsafe_allow_html=True)
         
         # Extract actual values from forecast dataframe
         total_demand = 0
@@ -1789,7 +1770,7 @@ with tabs[0]:  # Dashboard tab
                 ].copy()
                 
                 if not at_risk_items.empty:
-                    st.markdown('<div class="section-header"><h2 class="section-title">⚠️ High Priority Alerts</h2></div>', unsafe_allow_html=True)
+                    st.markdown('<div class="section-header"><h2 class="section-title"> High Priority Alerts</h2></div>', unsafe_allow_html=True)
                     
                     # Display top 3 critical/high alerts
                     critical_alerts = at_risk_items.head(3)
@@ -1805,13 +1786,13 @@ with tabs[0]:  # Dashboard tab
                                 
                                 if risk == 'critical':
                                     alert_class = "alert-critical"
-                                    icon = "🔴"
+                                    icon = ""
                                 elif risk == 'high':
                                     alert_class = "alert-high"
-                                    icon = "🟠"
+                                    icon = ""
                                 else:
                                     alert_class = "alert-medium"
-                                    icon = "🟡"
+                                    icon = ""
                                 
                                 st.markdown(f"""
                                 <div class="alert-box {alert_class}">
@@ -1822,14 +1803,14 @@ with tabs[0]:  # Dashboard tab
                                         {_format_risk_badge(risk)}
                                     </div>
                                     <div style="font-size: 0.9rem; opacity: 0.9;">
-                                        ⏳ Expires in {days} days<br>
-                                        🎯 Action: {action.replace('_', ' ').title()}
+                                         Expires in {days} days<br>
+                                         Action: {action.replace('_', ' ').title()}
                                     </div>
                                 </div>
                                 """, unsafe_allow_html=True)
         
         # Charts section with actual data
-        st.markdown('<div class="section-header"><h2 class="section-title">📈 Forecast Overview</h2></div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header"><h2 class="section-title"> Forecast Overview</h2></div>', unsafe_allow_html=True)
         
         col1, col2 = st.columns([2, 1])
         with col1:
@@ -1838,9 +1819,9 @@ with tabs[0]:  # Dashboard tab
                 if chart:
                     st.plotly_chart(chart, use_container_width=True)
                 else:
-                    st.info("📭 Unable to create forecast chart with available data")
+                    st.info(" Unable to create forecast chart with available data")
             else:
-                st.info("📭 No forecast data available")
+                st.info(" No forecast data available")
         
         with col2:
             if not recommendations_df.empty:
@@ -1848,16 +1829,16 @@ with tabs[0]:  # Dashboard tab
                 if chart:
                     st.plotly_chart(chart, use_container_width=True)
                 else:
-                    st.info("📭 Unable to create risk distribution chart")
+                    st.info(" Unable to create risk distribution chart")
             else:
-                st.info("📭 No risk assessment data available")
+                st.info(" No risk assessment data available")
 
 with tabs[1]:  # Forecasts tab
-    st.markdown('<div class="section-header"><h2 class="section-title">📈 Product Forecasts (Real Names)</h2></div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header"><h2 class="section-title"> Product Forecasts (Real Names)</h2></div>', unsafe_allow_html=True)
     
     if not forecast_df.empty:
         # Search and filter
-        search = st.text_input("🔍 Search Products by Name", "")
+        search = st.text_input(" Search Products by Name", "")
         
         # Prepare display dataframe
         display_df = forecast_df.copy()
@@ -1958,18 +1939,18 @@ with tabs[1]:  # Forecasts tab
             )
             
             # Show top predictions from terminal output as reference
-            st.markdown("### 🏆 Expected Top Predictions")
+            st.markdown("###  Expected Top Predictions")
             terminal_top = [
                 ("Varm Chokolade", 6.1),
                 ("Sunny Hawaii", 5.1),
                 ("Broccolien", 5.0),
-                ("Økologisk Classic", 5.0),
+                ("kologisk Classic", 5.0),
                 ("Cortado", 4.8),
                 ("Artichoke", 4.7),
-                ("Rødvin", 4.5),
+                ("Rdvin", 4.5),
                 ("Potato", 4.4),
                 ("Espresso", 4.3),
-                ("Thy Økologisk Humle", 4.3)
+                ("Thy kologisk Humle", 4.3)
             ]
             
             top_df = pd.DataFrame(terminal_top, columns=['Product Name', 'Expected Daily Demand'])
@@ -1978,7 +1959,7 @@ with tabs[1]:  # Forecasts tab
             # Download button
             csv = display_table.to_csv(index=False).encode('utf-8')
             st.download_button(
-                label="📥 Download Forecasts (CSV)",
+                label=" Download Forecasts (CSV)",
                 data=csv,
                 file_name=f"forecasts_{datetime.now().strftime('%Y%m%d')}.csv",
                 mime="text/csv",
@@ -1988,10 +1969,10 @@ with tabs[1]:  # Forecasts tab
             st.warning("No demand data found in forecast")
             st.dataframe(forecast_df, use_container_width=True)
     else:
-        st.info("📭 No forecast data available yet. Run the pipeline first.")
+        st.info(" No forecast data available yet. Run the pipeline first.")
 
 with tabs[2]:  # Ingredients tab
-    st.markdown('<div class="section-header"><h2 class="section-title">🥗 Ingredient Requirements</h2></div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header"><h2 class="section-title"> Ingredient Requirements</h2></div>', unsafe_allow_html=True)
     
     if not prep_df.empty:
         # Prepare display dataframe
@@ -2046,11 +2027,11 @@ with tabs[2]:  # Ingredients tab
         # Display summary metrics
         col1, col2, col3 = st.columns(3)
         with col1: 
-            st.metric("📦 Total Ingredients", f"{total_items}")
+            st.metric(" Total Ingredients", f"{total_items}")
         with col2: 
-            st.metric("🛒 Items to Order", f"{items_to_order}")
+            st.metric(" Items to Order", f"{items_to_order}")
         with col3: 
-            st.metric("💰 Estimated Cost", f"${total_cost:,.2f}")
+            st.metric(" Estimated Cost", f"${total_cost:,.2f}")
         
         # Display shopping list if items need ordering
         if items_to_order > 0 and order_qty_col:
@@ -2068,7 +2049,7 @@ with tabs[2]:  # Ingredients tab
                 display_cols.append(cost_col)
             
             if display_cols:
-                st.markdown("### 🛒 Shopping List")
+                st.markdown("###  Shopping List")
                 shopping_df = ordering_df[display_cols].copy()
                 
                 # Rename columns
@@ -2091,7 +2072,7 @@ with tabs[2]:  # Ingredients tab
                 )
         
         # Display full prep plan
-        st.markdown("### 📋 Full Preparation Plan")
+        st.markdown("###  Full Preparation Plan")
         
         # Create display columns for full plan
         full_display_cols = []
@@ -2139,7 +2120,7 @@ with tabs[2]:  # Ingredients tab
             with col1:
                 csv = full_plan_df.to_csv(index=False).encode('utf-8')
                 st.download_button(
-                    label="📥 Download Full Plan",
+                    label=" Download Full Plan",
                     data=csv,
                     file_name=f"prep_plan_{datetime.now().strftime('%Y%m%d')}.csv",
                     mime="text/csv",
@@ -2149,7 +2130,7 @@ with tabs[2]:  # Ingredients tab
                 if items_to_order > 0 and 'shopping_df' in locals():
                     csv_order = shopping_df.to_csv(index=False).encode('utf-8')
                     st.download_button(
-                        label="🛒 Download Shopping List",
+                        label=" Download Shopping List",
                         data=csv_order,
                         file_name=f"shopping_list_{datetime.now().strftime('%Y%m%d')}.csv",
                         mime="text/csv",
@@ -2158,7 +2139,7 @@ with tabs[2]:  # Ingredients tab
         else:
             st.dataframe(display_prep, use_container_width=True)
     else:
-        st.info("📭 No ingredient data available yet. Run the pipeline first.")
+        st.info(" No ingredient data available yet. Run the pipeline first.")
 
     st.subheader("What to Order")
     if not forecast_df.empty:
@@ -2228,16 +2209,16 @@ with tabs[2]:  # Ingredients tab
 with tabs[3]:
     st.markdown('<div class="section-header"><h2 class="section-title">Upload Data</h2></div>', unsafe_allow_html=True)
     
-    uploaded_file = st.file_uploader("📁 Select File", type=["csv", "xlsx"])
-    dataset_choice = st.selectbox("📊 Data Type", DATASET_OPTIONS)
+    uploaded_file = st.file_uploader(" Select File", type=["csv", "xlsx"])
+    dataset_choice = st.selectbox(" Data Type", DATASET_OPTIONS)
     
     if uploaded_file is not None:
         try:
             incoming_df = _read_upload(uploaded_file)
-            st.success(f"✅ Loaded {len(incoming_df):,} rows")
+            st.success(f" Loaded {len(incoming_df):,} rows")
             
             # Show preview
-            st.markdown("### 👁️ Preview (First 50 rows)")
+            st.markdown("###  Preview (First 50 rows)")
             st.dataframe(incoming_df.head(50), use_container_width=True)
             
             # Show statistics
@@ -2249,48 +2230,48 @@ with tabs[3]:
             with col3:
                 st.metric("Size", f"{uploaded_file.size / 1024:.1f} KB")
             
-            if st.button("💾 Save to Data Folder", type="primary", use_container_width=True):
+            if st.button(" Save to Data Folder", type="primary", use_container_width=True):
                 target_file = Path(data_dir) / uploaded_file.name
                 target_file.parent.mkdir(parents=True, exist_ok=True)
                 incoming_df.to_csv(target_file, index=False)
-                st.success(f"✅ Saved to {target_file}")
+                st.success(f" Saved to {target_file}")
                 st.balloons()
         except Exception as e:
-            st.error(f"❌ Error: {e}")
+            st.error(f" Error: {e}")
 
 with tabs[4]:  # Exports tab
-    st.markdown('<div class="section-header"><h2 class="section-title">💾 Export Reports</h2></div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header"><h2 class="section-title"> Export Reports</h2></div>', unsafe_allow_html=True)
     
     reports = _load_latest_reports(Path(output_dir), data_dir)
     
     # Show available reports
     if reports:
-        st.markdown("### 📊 Available Reports")
+        st.markdown("###  Available Reports")
         
         report_info = {
             "Demand Forecast": {
                 "df": reports.get("forecast", pd.DataFrame()),
-                "icon": "📈",
+                "icon": "",
                 "description": "Daily demand predictions"
             },
             "Risk Alerts": {
                 "df": reports.get("recommendations", pd.DataFrame()),
-                "icon": "⚠️",
+                "icon": "",
                 "description": "Inventory risk assessment and recommendations"
             },
             "Ingredient List": {
                 "df": reports.get("prep_plan", pd.DataFrame()),
-                "icon": "🥗",
+                "icon": "",
                 "description": "Preparation quantities and shopping list"
             },
             "Promotions": {
                 "df": reports.get("promotions", pd.DataFrame()),
-                "icon": "🎯",
+                "icon": "",
                 "description": "Automated promotions for at-risk items"
             },
             "Summary": {
                 "df": reports.get("summary", pd.DataFrame()),
-                "icon": "📊",
+                "icon": "",
                 "description": "Pipeline execution summary"
             }
         }
@@ -2305,7 +2286,7 @@ with tabs[4]:  # Exports tab
                 with col1:
                     csv_data = info['df'].to_csv(index=False).encode('utf-8')
                     st.download_button(
-                        label="📥 CSV",
+                        label=" CSV",
                         data=csv_data,
                         file_name=f"{report_name.lower().replace(' ','_')}_{datetime.now().strftime('%Y%m%d')}.csv",
                         mime="text/csv",
@@ -2317,7 +2298,7 @@ with tabs[4]:  # Exports tab
                     excel_bytes = _to_excel_bytes(info['df'])
                     if excel_bytes:
                         st.download_button(
-                            label="📊 Excel",
+                            label=" Excel",
                             data=excel_bytes,
                             file_name=f"{report_name.lower().replace(' ','_')}_{datetime.now().strftime('%Y%m%d')}.xlsx",
                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -2330,13 +2311,13 @@ with tabs[4]:  # Exports tab
                 
                 st.markdown("---")
     else:
-        st.info("📭 No reports available yet. Run the pipeline first.")
+        st.info(" No reports available yet. Run the pipeline first.")
 
 with tabs[5]:  # Debug tab
-    st.markdown('<div class="section-header"><h2 class="section-title">🔍 Debug Information</h2></div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header"><h2 class="section-title"> Debug Information</h2></div>', unsafe_allow_html=True)
     
     # Show paths
-    st.markdown("### 📁 Paths")
+    st.markdown("###  Paths")
     st.code(f"""
     ROOT_DIR: {ROOT_DIR}
     DATA_DIR_DEFAULT: {DATA_DIR_DEFAULT}
@@ -2349,14 +2330,14 @@ with tabs[5]:  # Debug tab
     col1, col2 = st.columns(2)
     with col1:
         data_exists = Path(data_dir).exists()
-        st.metric("Data Directory Exists", "✅ Yes" if data_exists else "❌ No")
+        st.metric("Data Directory Exists", " Yes" if data_exists else " No")
     with col2:
         output_exists = Path(output_dir).exists()
-        st.metric("Reports Directory Exists", "✅ Yes" if output_exists else "❌ No")
+        st.metric("Reports Directory Exists", " Yes" if output_exists else " No")
     
     # List files in reports directory
     if output_exists:
-        st.markdown("### 📄 Files in Reports Directory")
+        st.markdown("###  Files in Reports Directory")
         report_files = list(Path(output_dir).glob("*.csv"))
         if report_files:
             for file in report_files:
@@ -2377,7 +2358,7 @@ with tabs[5]:  # Debug tab
             st.info("No CSV files found in reports directory")
     
     # Show loaded reports
-    st.markdown("### 📊 Loaded Reports")
+    st.markdown("###  Loaded Reports")
     st.write(f"Number of reports loaded: {len(reports)}")
     st.write(f"Report keys: {list(reports.keys())}")
     
@@ -2391,13 +2372,13 @@ with tabs[5]:  # Debug tab
             st.info("Empty dataframe")
     
     # Show pipeline status
-    st.markdown("### 🔧 Pipeline Status")
+    st.markdown("###  Pipeline Status")
     st.write(f"HAS_PIPELINE: {HAS_PIPELINE}")
     st.write(f"HAS_PLOTLY: {HAS_PLOTLY}")
     st.write(f"HAS_AUTOREFRESH: {HAS_AUTOREFRESH}")
     
     # Show state
-    st.markdown("### 📝 System State")
+    st.markdown("###  System State")
     state = _load_state()
     st.json(state)
 
@@ -2663,11 +2644,11 @@ with tabs[5]:
 st.markdown("""
 <div class="footer">
     <div style="font-size: 1.1rem; font-weight: 600; color: rgba(255,255,255,0.95); margin-bottom: 1rem;">
-        🌿 Fresh Flow Dashboard v4.3
+         Fresh Flow Dashboard v4.3
     </div>
     <div style="color: rgba(255,255,255,0.8); font-size: 0.95rem;">
         Professional inventory management with AI forecasting<br>
-        <span style="color: #4caf50;">✓ Real product names enabled (Varm Chokolade, Sunny Hawaii, Broccolien, etc.)</span>
+        <span style="color: #4caf50;"> Real product names enabled (Varm Chokolade, Sunny Hawaii, Broccolien, etc.)</span>
     </div>
     <div style="margin-top: 1.5rem; font-size: 0.85rem; color: rgba(255,255,255,0.6);">
         Production Ready System | Data updated with real menu items
