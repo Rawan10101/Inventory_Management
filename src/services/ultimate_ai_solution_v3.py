@@ -47,8 +47,8 @@ from tensorflow.keras.layers import (
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 
-print(f"✅ TensorFlow Version: {tf.__version__}")
-print(f"✅ GPU Available: {tf.config.list_physical_devices('GPU')}")
+print(f" TensorFlow Version: {tf.__version__}")
+print(f" GPU Available: {tf.config.list_physical_devices('GPU')}")
 
 
 class UltimateInventoryIntelligence:
@@ -1874,15 +1874,15 @@ if __name__ == "__main__":
     ╚════════════════════════════════════════════════════════════════════════╝
     """)
     
-    print("\n📝 V3.0 ENHANCEMENTS:")
-    print("   ✅ 9 Advanced Models (6 Traditional + 3 Deep Learning)")
-    print("   ✅ LSTM for Temporal Pattern Learning")
-    print("   ✅ GRU for Efficient Sequence Modeling")
-    print("   ✅ Transformer with Multi-Head Attention")
-    print("   ✅ 120+ Engineered Features (ALL available data)")
-    print("   ✅ Inventory Features (stock, expiration, shelf life)")
-    print("   ✅ Campaign Features (pre/post periods, intensity)")
-    print("   ✅ BOM Features (recipe complexity, ingredient counts)")
-    print("   ✅ Advanced Holiday Detection (Danish + Commercial)")
-    print("   ✅ External Factors (weather, temperature, pay periods)")
-    print("\n   🚀 Production-ready with maximum accuracy!\n")
+    print("\n V3.0 ENHANCEMENTS:")
+    print("    9 Advanced Models (6 Traditional + 3 Deep Learning)")
+    print("    LSTM for Temporal Pattern Learning")
+    print("    GRU for Efficient Sequence Modeling")
+    print("    Transformer with Multi-Head Attention")
+    print("    120+ Engineered Features (ALL available data)")
+    print("    Inventory Features (stock, expiration, shelf life)")
+    print("    Campaign Features (pre/post periods, intensity)")
+    print("    BOM Features (recipe complexity, ingredient counts)")
+    print("    Advanced Holiday Detection (Danish + Commercial)")
+    print("    External Factors (weather, temperature, pay periods)")
+    print("\n    Production-ready with maximum accuracy!\n")
