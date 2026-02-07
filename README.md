@@ -162,24 +162,6 @@ pip install -r requirements.txt
 ```bash
 streamlit run app.py
 ```
-## Quick Start Guide
-
-### 1. Initial Setup
-- Navigate to http://localhost:8501
-- In the sidebar, set Data Folder to `./data/Inventory_Management`
-- Set Reports Folder to `./reports`
-
-### 2. Run the Pipeline
-- Click "Run Pipeline Now" in the dashboard
-- The system will process data and generate forecasts
-- Real product names will be applied automatically
-
-### 3. View Results
-- Dashboard tab: Real-time KPIs and alerts
-- Forecasts tab: Product demand predictions
-- Ingredients tab: Kitchen prep requirements
-- Exports tab: Download reports
----
 ## Usage:
 
 This project can be used to:
