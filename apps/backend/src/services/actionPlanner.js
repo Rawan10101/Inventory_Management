@@ -14,7 +14,7 @@ export const planAction = ({ message, context, intentResult, parsedData }) => {
       : intent === "dataset_modification" && promotionKeyword
         ? "promotion_planning"
         : intent;
-  const dataset = entities.dataset || context?.lastDataset || "sales";
+  const dataset = entities.dataset || context?.lastDataset || null;
   const horizon = entities.horizon || (entities.period === "weekly" ? "week" : "day") || "week";
   const expiringDays = entities.expiringDays || 3;
   const discountPercent = entities.discountPercent ?? null;
@@ -38,7 +38,9 @@ export const planAction = ({ message, context, intentResult, parsedData }) => {
         columns: parsedData.columns,
         rows: parsedData.rows,
       };
-      assistantMessage = `Ready to ingest ${parsedData.rows.length || 0} rows into the ${dataset} dataset.`;
+      assistantMessage = dataset
+        ? `Ready to ingest ${parsedData.rows.length || 0} rows into the ${dataset} dataset.`
+        : `Ready to ingest ${parsedData.rows.length || 0} rows. Dataset will be inferred from the columns.`;
       actionPreview = {
         dataset,
         rows: parsedData.rows.slice(0, 5),
@@ -59,7 +61,9 @@ export const planAction = ({ message, context, intentResult, parsedData }) => {
         rows: parsedData.rows,
       };
       requiresConfirmation = operation === "delete" || /overwrite/i.test(message);
-      assistantMessage = `Prepared a ${operation} operation on ${dataset}.`;
+      assistantMessage = dataset
+        ? `Prepared a ${operation} operation on ${dataset}.`
+        : `Prepared a ${operation} operation. Dataset will be inferred from the columns.`;
       actionPreview = {
         dataset,
         operation,

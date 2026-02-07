@@ -3,6 +3,8 @@ import { promises as fs } from "fs";
 import { pool } from "../db/pool.js";
 import { sanitizeDatasetName } from "../utils/sanitize.js";
 import { toCsv } from "../utils/csv.js";
+import { parseCsv } from "../utils/csv.js";
+import { resolveDatasetMeta, resolveDataDir } from "./datasetRegistry.js";
 
 const resolveRoot = () =>
   process.env.FRESHFLOW_ROOT
@@ -36,6 +38,40 @@ const writeCsvSnapshot = async ({ dataset, columns, rows }) => {
   const csv = toCsv(columns, rows);
   await fs.writeFile(outputPath, csv, "utf8");
   return outputPath;
+};
+
+const resolveFilePath = async (datasetName) => {
+  const dataDir = resolveDataDir();
+  const meta = await resolveDatasetMeta({ dataset: datasetName });
+  if (!meta) return null;
+  return { ...meta, filePath: path.join(dataDir, meta.file || `${meta.name}.csv`) };
+};
+
+const readCsvFile = async (filePath) => {
+  try {
+    const content = await fs.readFile(filePath, "utf8");
+    return parseCsv(content);
+  } catch (error) {
+    return { columns: [], rows: [] };
+  }
+};
+
+const ensureBackup = async (filePath) => {
+  try {
+    const dataDir = resolveDataDir();
+    const backupDir = path.join(dataDir, "backups");
+    await fs.mkdir(backupDir, { recursive: true });
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const filename = `${path.basename(filePath, ".csv")}_${timestamp}.csv`;
+    await fs.copyFile(filePath, path.join(backupDir, filename));
+  } catch (error) {
+    // ignore backup failure
+  }
+};
+
+const writeCsvFile = async (filePath, columns, rows) => {
+  const csv = toCsv(columns, rows);
+  await fs.writeFile(filePath, csv, "utf8");
 };
 
 const insertGenericRows = async (dataset, rows) => {
@@ -220,8 +256,44 @@ const deleteInventoryRows = async (rows) => {
 };
 
 export const ingestDataset = async ({ dataset, columns, rows }) => {
-  const sanitized = sanitizeDatasetName(dataset || "dataset");
   const resolvedColumns = columns?.length ? columns : Object.keys(rows[0] || {});
+  const inferredMeta = await resolveDatasetMeta({ dataset, columns: resolvedColumns });
+  const sanitized = sanitizeDatasetName(dataset || inferredMeta?.name || "dataset");
+
+  if (inferredMeta) {
+    const filePath = path.join(resolveDataDir(), inferredMeta.file || `${inferredMeta.name}.csv`);
+    if (inferredMeta.required?.length) {
+      const missing = inferredMeta.required.filter((col) => !resolvedColumns.includes(col));
+      if (missing.length) {
+        throw new Error(`Missing required columns: ${missing.join(", ")}`);
+      }
+    }
+    const existing = await readCsvFile(filePath);
+    const combinedColumns = Array.from(
+      new Set([...(existing.columns || []), ...(resolvedColumns || [])])
+    );
+    const normalizedRows = rows.map((row) =>
+      combinedColumns.reduce((acc, col) => {
+        acc[col] = row[col] ?? "";
+        return acc;
+      }, {})
+    );
+    const combinedRows = [...existing.rows, ...normalizedRows];
+
+    if (existing.rows.length) {
+      await ensureBackup(filePath);
+    }
+    await writeCsvFile(filePath, combinedColumns, combinedRows);
+
+    const snapshotPath = await writeCsvSnapshot({
+      dataset: inferredMeta.name,
+      columns: combinedColumns,
+      rows: normalizedRows,
+    });
+
+    return { count: rows.length, snapshotPath, dataset: inferredMeta.name, filePath };
+  }
+
   const snapshotPath = await writeCsvSnapshot({
     dataset: sanitized,
     columns: resolvedColumns,
@@ -241,7 +313,72 @@ export const ingestDataset = async ({ dataset, columns, rows }) => {
 };
 
 export const modifyDataset = async ({ dataset, operation, rows }) => {
-  const sanitized = sanitizeDatasetName(dataset || "dataset");
+  const inferredMeta = await resolveDatasetMeta({
+    dataset,
+    columns: Object.keys(rows[0] || {}),
+  });
+  const sanitized = sanitizeDatasetName(dataset || inferredMeta?.name || "dataset");
+
+  if (inferredMeta) {
+    const filePath = path.join(resolveDataDir(), inferredMeta.file || `${inferredMeta.name}.csv`);
+    const existing = await readCsvFile(filePath);
+    const incomingColumns = Object.keys(rows[0] || {});
+    const columns = Array.from(
+      new Set([...(existing.columns || []), ...incomingColumns])
+    );
+    const keys = inferredMeta.keys?.length ? inferredMeta.keys : [];
+    const required = inferredMeta.required || [];
+
+    if (operation === "insert" && required.length) {
+      const missing = required.filter((col) => !incomingColumns.includes(col));
+      if (missing.length) {
+        throw new Error(`Missing required columns: ${missing.join(", ")}`);
+      }
+    }
+
+    if (operation !== "insert" && !keys.length) {
+      throw new Error("No key columns found to modify this dataset.");
+    }
+
+    const makeKey = (row) => keys.map((key) => row[key]).join("|");
+    const existingMap = new Map(existing.rows.map((row) => [makeKey(row), row]));
+    let modifiedRows = [...existing.rows];
+    let count = 0;
+
+    if (operation === "insert") {
+      const normalizedRows = rows.map((row) =>
+        columns.reduce((acc, col) => {
+          acc[col] = row[col] ?? "";
+          return acc;
+        }, {})
+      );
+      modifiedRows = [...existing.rows, ...normalizedRows];
+      count = rows.length;
+    } else if (operation === "update") {
+      const updateMap = new Map(rows.map((row) => [makeKey(row), row]));
+      modifiedRows = existing.rows.map((row) => {
+        const key = makeKey(row);
+        const updateRow = updateMap.get(key);
+        if (updateRow) {
+          count += 1;
+          return { ...row, ...updateRow };
+        }
+        return row;
+      });
+    } else if (operation === "delete") {
+      const deleteKeys = new Set(rows.map((row) => makeKey(row)));
+      const before = existing.rows.length;
+      modifiedRows = existing.rows.filter((row) => !deleteKeys.has(makeKey(row)));
+      count = before - modifiedRows.length;
+    }
+
+    if (existing.rows.length) {
+      await ensureBackup(filePath);
+    }
+    await writeCsvFile(filePath, columns, modifiedRows);
+    return { count, operation, dataset: inferredMeta.name, filePath };
+  }
+
   const isInventory = sanitized === "inventory";
   const isSales = sanitized === "sales";
 
