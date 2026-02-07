@@ -323,8 +323,38 @@ class UltimateInventoryIntelligence:
         # ===== 9. BOM FEATURES (5+ features) ← NEW =====
         df = self._add_bom_features(df)
         
-        # Fill NaN values
-        df = df.fillna(method='ffill').fillna(method='bfill').fillna(0)
+        # Fill NaN values - Handle missing values intelligently based on column type
+        for col in df.columns:
+            # Skip target column
+            if col == 'quantity_sold':
+                continue
+                
+            # Handle categorical columns separately
+            if pd.api.types.is_categorical_dtype(df[col]):
+                # Fill categorical with mode or 'Unknown'
+                if not df[col].isna().all():
+                    mode_val = df[col].mode()
+                    fill_val = mode_val[0] if len(mode_val) > 0 else 'Unknown'
+                else:
+                    fill_val = 'Unknown'
+                df[col] = df[col].fillna(fill_val)
+            
+            # Handle numeric columns
+            elif pd.api.types.is_numeric_dtype(df[col]):
+                # Try forward fill, then backward fill, then fill with 0
+                df[col] = df[col].fillna(method='ffill').fillna(method='bfill').fillna(0)
+            
+            # Handle datetime columns
+            elif pd.api.types.is_datetime64_any_dtype(df[col]):
+                # For dates, fill with previous date or next date
+                df[col] = df[col].fillna(method='ffill').fillna(method='bfill')
+                # If still NaN (empty dataframe), fill with a default date
+                if df[col].isna().any():
+                    df[col] = df[col].fillna(pd.Timestamp('2025-11-01'))
+            
+            # Handle other object types
+            else:
+                df[col] = df[col].fillna(method='ffill').fillna(method='bfill').fillna('Unknown')
         
         return df
     
